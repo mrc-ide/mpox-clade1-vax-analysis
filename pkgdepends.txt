@@ -1,0 +1,19 @@
+repo::https://ncov-ic.r-universe.dev
+repo::https://mrc-ide.r-universe.dev
+
+#monty
+#dust2
+tidyverse
+orderly2
+abind
+bayesplot
+posterior
+mrc-ide/eigen1
+
+## Use current main version of mpoxseir from github
+mrc-ide/mpoxseir
+
+## To use a local version of mpoxseir on the cluster, build the package,
+## place the .tar.gz in the mpox-drc-outputs directory and use the following
+## instead (update the package version below to match your build)
+# local::./mpoxseir_0.1.0.tar.gz

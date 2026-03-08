@@ -1,0 +1,183 @@
+﻿scenario_name ,region,total_doses_children,total_doses_adults,doses_per_day_total,vaccine_dose_scenario,prioritisation_children,prioritisation_adults ,vaccine_used,daily_vax_split_children,uptake_realised,t_ve,days_between_doses
+A: LC16m8,sudkivu,183,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,183,122,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,122,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,122,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,122,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,122,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+No vaccination,sudkivu,0,0,0,no_vaccine,children_all_equal,adults_all_equal,mix,0.5,1,28,28
+A: LC16m8,sudkivu,366,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,366,244,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,244,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,244,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,244,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,244,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,733,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,733,488,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,488,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,488,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,488,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,488,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,1465,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,1465,977,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,977,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,977,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,977,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,977,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,2930,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,2930,1953,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,1953,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,1953,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,1953,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,1953,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,5859,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,5859,3906,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,3906,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,3906,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,3906,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,3906,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,11719,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,11719,7813,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,7813,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,7813,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,7813,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,7813,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,23438,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,23438,15625,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,15625,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,15625,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,15625,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,15625,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,46875,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,46875,31250,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,31250,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,31250,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,31250,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,31250,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,93750,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,93750,62500,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,62500,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,62500,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,62500,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,62500,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,187500,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,187500,125000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,125000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,125000,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,125000,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,125000,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,375000,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,375000,250000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,250000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,250000,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,250000,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,250000,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,750000,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,750000,500000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,500000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,500000,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,500000,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,500000,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,1500000,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,1500000,1000000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,1000000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,1000000,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,1000000,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,1000000,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,sudkivu,3000000,0,26000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,sudkivu,3000000,2000000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,sudkivu,0,2000000,26000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,sudkivu,0,2000000,26000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,sudkivu,0,2000000,26000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,sudkivu,0,2000000,26000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,59,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,59,39,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,39,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,39,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,39,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,39,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+No vaccination,equateur,0,0,0,no_vaccine,children_all_equal,adults_all_equal,mix,0.5,1,28,28
+A: LC16m8,equateur,117,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,117,78,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,78,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,78,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,78,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,78,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,235,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,235,156,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,156,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,156,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,156,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,156,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,469,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,469,313,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,313,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,313,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,313,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,313,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,938,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,938,625,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,625,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,625,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,625,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,625,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,1875,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,1875,1250,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,1250,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,1250,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,1250,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,1250,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,3750,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,3750,2500,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,2500,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,2500,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,2500,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,2500,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,7500,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,7500,5000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,5000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,5000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,5000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,5000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,15000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,15000,10000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,10000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,10000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,10000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,10000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,30000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,30000,20000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,20000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,20000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,20000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,20000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,60000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,60000,40000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,40000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,40000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,40000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,40000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,120000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,120000,80000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,80000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,80000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,80000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,80000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,240000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,240000,160000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,160000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,160000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,160000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,160000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,480000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,480000,320000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,320000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,320000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,320000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,320000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28
+A: LC16m8,equateur,960000,0,5000,1st_dose_only,children_all_equal,adults_all_equal,Lc16m8,0.5,1,28,28
+B: A + MVA-BN >12y,equateur,960000,640000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,mix,0.6,1,28,28
+C: MVA-BN,equateur,0,640000,5000,2_doses_prioritise_delay,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+D: C + 1st dose only,equateur,0,640000,5000,1st_dose_only,children_all_equal,adults_all_equal,MVA-BN,0.5,1,28,28
+E: D + <12y first,equateur,0,640000,5000,1st_dose_only,children_all_equal,adults_children_first,MVA-BN,0.5,1,28,28
+F: D + key pops first,equateur,0,640000,5000,1st_dose_only,children_all_equal,adults_key_pops,MVA-BN,0.5,1,28,28

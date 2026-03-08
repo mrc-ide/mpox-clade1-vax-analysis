@@ -1,0 +1,229 @@
+---
+title: "Values for paper"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-06-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+orderly2::orderly_resource("support.R")
+source("support.R")
+library(tidyverse)
+library(patchwork)
+library(mpoxseir)
+library(ggplot2)
+
+```
+
+```{r,include=FALSE}
+# read in data dependencies
+pmcmc_results_e <- readRDS("inputs/samples_equateur.RDS")
+fitting_data_e <- readRDS("inputs/fitting_data_equateur.RDS")
+pmcmc_results_s <- readRDS("inputs/samples_sudkivu.RDS")
+fitting_data_s <- readRDS("inputs/fitting_data_sudkivu.RDS")
+pmcmc_results_b <- readRDS("inputs/samples_burundi.RDS")
+fitting_data_b <- readRDS("inputs/fitting_data_burundi.RDS")
+
+pars_tidy_e <- tidy_pars(pmcmc_results_e)
+pars_tidy_s <- tidy_pars(pmcmc_results_s)
+pars_tidy_b <- tidy_pars(pmcmc_results_b)
+  
+pars_tidy <- rbind(pars_tidy_e |> mutate(region="equateur"),
+                   pars_tidy_s |> mutate(region="sudkivu"),
+                   pars_tidy_b |> mutate(region="burundi"))
+
+
+pars_summary <- pars_tidy %>% group_by(name, region) %>%
+  summarise(mean = round(mean(value,na.rm=TRUE),2),
+            lower = round(quantile(value,0.025,na.rm = TRUE),2),
+            upper = round(quantile(value,0.975,na.rm = TRUE),2)) 
+
+
+pars_summary_SW <- pars_tidy %>% filter(name=="prop_SW") %>% 
+  mutate(value = value*100) %>% group_by(region) %>%
+    summarise(mean = round(mean(value,na.rm=TRUE),2),
+            lower = round(quantile(value,0.025,na.rm = TRUE),2),
+            upper = round(quantile(value,0.975,na.rm = TRUE),2)) 
+
+ascert <- read.csv("outputs/ascertainment_separate.csv") %>%
+  mutate(equateur = round(equateur,2),
+         sudkivu = round(sudkivu,2),
+         burundi = round(burundi,2))
+
+
+prop_trans <- read.csv("outputs/prop_transmission_with_uncertainty.csv") %>%
+  filter(state!="Nosocomial")
+
+zoonotic <- read.csv("outputs/zoonotic_eq.csv") %>%
+  mutate(mean = round(mean,2),
+        q2.5 = round(q2.5,2),
+         q97.5 = round(q97.5,2))
+
+cfr <- read.csv("outputs/cfr.csv") %>%
+  mutate(mean = round(mean*100,1),
+         q2.5 = round(q2.5*100,1),
+         q97.5 = round(q97.5*100,1)) %>%
+  select(region,group,mean,q2.5,q97.5)
+
+
+```
+
+
+
+# Case ascertainment
+
+Make sure you have loaded the latest fits!
+
+## Equateur
+```{r, include=TRUE}
+pars_summary %>% filter(region=="equateur",name %in% c("phi_05_14","phi_15_plus"))
+```
+# percentage of posterior parameter sets where phi_15_plus>phi_05_14
+```{r, include=TRUE}
+phi_15_plus_post_e <- pars_tidy %>% filter(region=="equateur",name=="phi_15_plus")
+phi_05_14_post_e <- pars_tidy %>% filter(region=="equateur",name=="phi_05_14")
+
+# Percentage where
+# phi_15_plus > phi_05_14
+sum(phi_15_plus_post_e$value > phi_05_14_post_e$value)/nrow(phi_15_plus_post_e)
+
+```
+
+## Sud Kivu
+```{r, include=TRUE}
+pars_summary %>% filter(region=="sudkivu",name %in% c("phi_05_14","phi_15_plus"))
+```
+# percentage of posterior parameter sets where phi_15_plus>phi_05_14
+```{r, include=TRUE}
+phi_15_plus_post_s <- pars_tidy %>% filter(region=="sudkivu",name=="phi_15_plus")
+phi_05_14_post_s <- pars_tidy %>% filter(region=="sudkivu",name=="phi_05_14")
+
+# Percentage of posterior samples where
+# phi_15_plus > phi_05_14
+sum(phi_15_plus_post_s$value > phi_05_14_post_s$value)/nrow(phi_15_plus_post_s)
+
+```
+
+## Bujumbura
+```{r, include=TRUE}
+pars_summary %>% filter(region=="burundi",name %in% c("phi_05_14","phi_15_plus"))
+```
+# percentage of posterior parameter sets where phi_15_plus>phi_05_14
+```{r, include=TRUE}
+phi_15_plus_post_b <- pars_tidy %>% filter(region=="burundi",name=="phi_15_plus")
+phi_05_14_post_b <- pars_tidy %>% filter(region=="burundi",name=="phi_05_14")
+
+# Percentage of posterior samples where
+# phi_15_plus > phi_05_14
+sum(phi_15_plus_post_b$value > phi_05_14_post_b$value)/nrow(phi_15_plus_post_b)
+
+```
+
+## all regions 
+# percentage of posterior parameter sets where phi_15_plus>phi_05_14
+```{r, include=TRUE}
+phi_15_plus_post <- pars_tidy %>% filter(name=="phi_15_plus")
+phi_05_14_post <- pars_tidy %>% filter(name=="phi_05_14")
+
+# Percentage of posterior samples where
+# phi_15_plus > phi_05_14
+sum(phi_15_plus_post$value > phi_05_14_post$value)/nrow(phi_15_plus_post)
+
+```
+
+## overall ascertainment
+```{r, include=TRUE}
+ascert %>% t() %>% data.frame()
+```
+
+
+
+# SW prop
+## Equateur
+```{r, include=TRUE}
+pars_summary %>% filter(region=="equateur",name=="prop_SW")
+```
+
+## Sud Kivu
+```{r, include=TRUE}
+pars_summary %>% filter(region=="sudkivu",name=="prop_SW")
+```
+
+## Bujumbura
+```{r, include=TRUE}
+pars_summary %>% filter(region=="burundi",name=="prop_SW")
+```
+
+
+
+# Transmissibility
+
+## Equateur
+```{r, include=TRUE}
+pars_summary %>% filter(region=="equateur",name %in% c("R0_hh","R0_sw_st"))
+```
+
+## Sud Kivu
+```{r, include=TRUE}
+pars_summary %>% filter(region=="sudkivu",name %in% c("R0_hh","R0_sw_st"))
+```
+
+## Bujumbura
+```{r, include=TRUE}
+pars_summary %>% filter(region=="burundi",name %in% c("R0_hh","R0_sw_st"))
+```
+
+
+# Proportion by transmission route
+
+## Equateur
+```{r,include = TRUE}
+prop_trans %>% filter(region=="equateur")
+```
+
+## Sud Kivu
+```{r,include = TRUE}
+prop_trans %>% filter(region=="sudkivu")
+```
+
+## Bujumbura
+```{r,include = TRUE}
+prop_trans %>% filter(region=="burundi")
+```
+
+
+# Zoonotic spillover (Equateur only)
+```{r, include=TRUE}
+zoonotic %>% dplyr::select(group,mean,q2.5,q97.5)
+
+```
+
+# Severity
+
+## Prior
+```{r, include=TRUE}
+cfr %>% filter(region == "prior")
+
+```
+
+
+## Equateur
+```{r, include=TRUE}
+cfr %>% filter(region == "equateur")
+
+```
+
+## Sud Kivu
+```{r, include=TRUE}
+cfr %>% filter(region == "sudkivu")
+
+```
+
+
+
+
+
+

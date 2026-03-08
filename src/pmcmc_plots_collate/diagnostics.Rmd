@@ -1,0 +1,54 @@
+---
+title: "Diagnostics table"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gtsummary)
+library(openxlsx)
+library(gt)
+
+```
+
+```{r tabs, echo = FALSE}
+  regions <- c("Equateur", "Sud-Kivu", "Bujumbura")
+  
+  load_diagnostics <- function(r) {
+    rr <- tolower(gsub("-", "", r))
+    x <- readRDS(paste0("inputs/", rr, "_convergence_diagnostics.rds"))
+    x$region <- r
+    x
+  }
+  diagnostics <- dplyr::bind_rows(lapply(regions, load_diagnostics)) |>
+    dplyr::select(variable, rhat, ess_bulk, ess_tail, region) |>
+    dplyr::mutate(rhat = round(rhat, 3),
+                  ess_bulk = round(ess_bulk),
+                  ess_tail = round(ess_tail)) |>
+    dplyr::mutate(
+      variable = case_when(variable == "alpha_cases" ~ "$\\alpha^C$",
+                           variable == "alpha_deaths" ~ "$\\alpha^D$",
+                           variable == "beta_z_max" ~ "$\\zeta$",
+                           variable == "cfr_00_04" ~ "$\\theta_{[0, 5)}$",
+                           variable == "lambda" ~ "$\\mu$",
+                           variable == "phi_05_14" ~ "$\\phi_{[5, 15)}$",
+                           variable == "phi_15_plus" ~ "$\\phi_{[15+)}$",
+                           variable == "prop_SW" ~ "$p^{SW}$",
+                           variable == "rho" ~ "$\\rho$",
+                           variable == "R0_hh" ~ "$R_0^H$",
+                           variable == "R0_sw_st" ~ "$R_0^{SW,PBS}$")) |>
+    gt::gt(groupname_col = "region") |>
+    gt::fmt_markdown() |>
+    gt::fmt_number(columns = rhat,
+                   decimals = 3) |>
+    gt::cols_label(variable = "parameter",
+                   rhat = gt::md("$\\hat{R}$"),
+                   ess_bulk = gt::md("$ESS_{bulk}$"),
+                   ess_tail = gt::md("$ESS_{tail}$"))
+  
+  diagnostics
+  
+```

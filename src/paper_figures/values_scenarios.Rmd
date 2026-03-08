@@ -1,0 +1,827 @@
+---
+title: "Values from plots"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-06-27"
+---
+
+```{r orderly, include=FALSE}
+orderly_pars <- orderly2::orderly_parameters(short_run = FALSE,
+                             fit_by_age = TRUE,
+                             deterministic = FALSE,
+                             mixing_matrix = "Zimbabwe",
+                             fit_KPs = TRUE, 
+                             assumptions = "standard",
+                             vaccines_onset = "start")
+list2env(orderly_pars, environment())
+
+# Load in all dependencies 
+orderly2::orderly_dependency(
+  name = "pmcmc",
+  query = "latest(parameter:region=='sudkivu' && parameter:assumptions == 'standard')",
+  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
+orderly2::orderly_dependency(
+  name = "pmcmc",
+  query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == 'standard')",
+  files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_equateur.png" = "outputs/traceplots.png"))
+orderly2::orderly_dependency(name = "run_postprocess",
+                             "latest(parameter:region =='sudkivu' && 
+                                     parameter:deterministic == FALSE && 
+                                     parameter:use_both_fit == FALSE && 
+                                     parameter:fit_by_age == TRUE && 
+                                     parameter:fit_KPs == TRUE &&
+                                     parameter:short_run == FALSE && 
+                                     parameter:vaccines_onset == 'start')",
+                             files=c("inputs/runs_postprocess_sudkivu.RDS" = "outputs/runs_postprocess.RDS"))
+orderly2::orderly_dependency(name = "run_postprocess",
+                             "latest(parameter:region =='equateur' && 
+                                     parameter:deterministic == FALSE && 
+                                     parameter:use_both_fit == FALSE && 
+                                     parameter:fit_by_age == TRUE && 
+                                     parameter:fit_KPs == TRUE &&
+                                     parameter:short_run == FALSE && 
+                                     parameter:vaccines_onset == 'start')",
+                             files=c("inputs/runs_postprocess_equateur.RDS" = "outputs/runs_postprocess.RDS"))
+orderly2::orderly_dependency(name = "run_postprocess_burundi",
+                             "latest(parameter:deterministic == this:deterministic && 
+                             parameter:short_run == this:short_run)",
+                             files=c("inputs/runs_postprocess_burundi.RDS" = "outputs/runs_postprocess.RDS"))
+
+orderly2::orderly_dependency(name = "pmcmc_burundi",
+                             "latest(parameter:deterministic == this:deterministic && parameter:short_run == this:short_run)",
+                             files =  c("inputs/samples.rds" = "outputs/samples.rds",
+                                        "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
+# Populations of provinces
+province_pop<-mpoxseir::parameters_demographic(region="sudkivu")$province_pop
+
+# Scenario colour palette
+scenarios_palette_slides <- c("No vaccination"="black",
+                              "A: LC16m8"="#5B859EFF", 
+                              "B: A + MVA-BN >12y"= "#75884BFF",
+                              "C: MVA-BN"= "#D48F90FF" ,
+                              "D: C + 1st dose only"="#AB84A5FF",
+                              "E: D + <12y first"="#B38711FF",
+                              "F: D + key pops first"="#800000")
+# Region colour pallette
+cols_region <- c(MetBrewer::met.brewer("Cassatt1", 7)[c(5,1)],MetBrewer::met.brewer("Demuth", 3)[3], MetBrewer::met.brewer("Cassatt1", 7)[3]) 
+names(cols_region) <- c("equateur", "sudkivu", "both", "burundi")
+nms_region <- c(equateur = "Equateur", sudkivu = "Sud Kivu", burundi = "Burundi")
+
+# Dates 
+vaccines_onset = "start"
+start_date<-mpoxseir::mpoxseir_date_as_date(371) #+ 14
+
+library(tidyverse)
+
+ 
+```
+
+
+```{r setup, include=FALSE}
+
+
+# Equateur data
+region <-"equateur"
+
+# load in post process
+big_df_equateur_start <- readRDS("inputs/runs_postprocess_equateur.RDS")|> 
+  mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
+  mutate(scenario_combo=scenario_name, 
+         scenario_name=sub(" \\(.*", "", scenario_new), 
+         scenario_dose=total_doses_children+total_doses_adults)|>
+  filter(scenario_num>49)
+
+# load in fitting data
+fitting_data_equateur <-  readRDS("inputs/fitting_data_equateur.RDS")
+
+
+# Sud Kivu data
+region <-"sudkivu"
+
+# load in post process
+big_df_sudkivu_start <- readRDS("inputs/runs_postprocess_sudkivu.RDS")|> 
+  mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
+  mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), 
+         scenario_dose=total_doses_children+total_doses_adults)|>
+  filter(scenario_num>49)
+
+# load in fitting data 
+fitting_data_sudkivu <-  readRDS("inputs/fitting_data_sudkivu.RDS")
+
+
+# Bujumbura data 
+region <- "bujumbura"
+## Fitting outputs
+fitting_data_bujumbura <- readRDS("inputs/fitting_data.rds")
+
+big_df_bujumbura_start <- readRDS("inputs/runs_postprocess_burundi.RDS") |> 
+  mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), scenario_dose=total_doses_children+total_doses_adults)
+
+
+
+```
+
+## Scenario C & D 
+
+Scenario C + D - max doses percentage infections:
+
+```{r C + D max}
+sudkivu_C_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+
+equateur_C_cases<-filter(big_df_equateur_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+
+bujumbura_C_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm=TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)-5):max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)))
+
+
+# Scenario D
+sudkivu_D_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+
+equateur_D_cases<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+
+bujumbura_D_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm=TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)-5):max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)))
+
+
+print("Equateur percentage cases averted Scenario C:")
+equateur_C_cases$mean_percent
+equateur_C_cases$lower_95_percent
+equateur_C_cases$upper_95_percent
+equateur_C_cases$mean_cumulative_doses
+
+print("Equateur percentage cases averted Scenario D:")
+equateur_D_cases$mean_percent
+equateur_D_cases$lower_95_percent
+equateur_D_cases$upper_95_percent
+equateur_D_cases$mean_cumulative_doses
+
+print("Sud Kivu percentage cases averted Scenario C:")
+sudkivu_C_cases$mean_percent
+sudkivu_C_cases$lower_95_percent
+sudkivu_C_cases$upper_95_percent
+sudkivu_C_cases$mean_cumulative_doses
+
+print("Sud Kivu percentage cases averted Scenario D:")
+sudkivu_D_cases$mean_percent
+sudkivu_D_cases$lower_95_percent
+sudkivu_D_cases$upper_95_percent
+sudkivu_D_cases$mean_cumulative_doses
+
+print("Bujumbura percentage cases averted Scenario C:")
+bujumbura_C_cases$mean_percent
+bujumbura_C_cases$lower_95_percent
+bujumbura_C_cases$upper_95_percent
+bujumbura_C_cases$mean_cumulative_doses
+
+print("Bujumbura percentage cases averted Scenario D:")
+bujumbura_D_cases$mean_percent
+bujumbura_D_cases$lower_95_percent
+bujumbura_D_cases$upper_95_percent
+bujumbura_D_cases$mean_cumulative_doses
+
+
+```
+
+## Equateur
+
+Scenario A - max doses percentage infections and deaths averted:
+
+```{r Equateur}
+A_equateur_max<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+
+A_equateur_max[,c("Category","mean_percent","lower_95_percent","upper_95_percent")]
+A_equateur_max[,c("Category","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
+
+```
+
+Scenario E & D - 320, 000 doses
+
+```{r Equateur 320}
+DE_equateur_320<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only", "E: D + <12y first"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"),total_doses_adults==320000)
+
+print("cases averted percentage:")
+DE_equateur_320[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+print("cases averted per dose:")
+DE_equateur_320[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+DEF_equateur_640<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only", "E: D + <12y first", "F: D + key pops first"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"),total_doses_adults==640000)
+mean(DEF_equateur_640$mean_percent)
+mean(DEF_equateur_640$mean_averted_per_dose)
+```
+## Sud Kivu
+
+Scenario D and F - max doses percentage infections and deaths averted:
+
+```{r Sud Kivu max}
+sudkivu_max<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+
+sudkivu_max[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+
+sudkivu_max[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
+
+sudkivu_max[,c("Category","scenario_name","scenario_dose","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+```
+Scenario E - 1 million doses percentage infections and deaths averted:
+
+```{r Sud Kivu 1 mil}
+E_sudkivu_1mil<-filter(big_df_sudkivu_start,
+                      scenario_name == "E: D + <12y first",
+                      TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"),
+                      scenario_dose==1000000)
+
+E_sudkivu_1mil[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+```
+Scenario A-F - min doses percentage infections and deaths averted:
+
+```{r Sud Kivu infections min}
+sudkivu_min<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((min(big_df_sudkivu_start$scenario_num)):(min(big_df_sudkivu_start$scenario_num)+5)))
+
+sudkivu_min[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+
+sudkivu_min[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+sudkivu_min[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
+
+
+
+```
+
+```{r Sud Kivu deaths min}
+sudkivu_min_deaths<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((min(big_df_sudkivu_start$scenario_num)):(min(big_df_sudkivu_start$scenario_num)+5)))
+
+sudkivu_min_deaths[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+sudkivu_min_deaths[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
+sudkivu_min_deaths[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
+
+
+
+```
+
+## Bujumbura 
+
+Scenario F - maximum doses percentage of infections and deaths averted:
+
+```{r Bujumbura max}
+bujumbura_max<-filter(big_df_bujumbura_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c(44:49))
+
+bujumbura_max[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
+```
+
+## SW & PBS percent infected by peak
+
+## Sud Kivu 
+
+```{r infections set up, include = FALSE}
+# Equateur 
+# read in scenario grid 
+orderly2::orderly_shared_resource(DRC_scenario_grid.csv = "DRC_scenario_grid.csv") 
+scenario_grid <- read_csv("DRC_scenario_grid.csv")|>filter(region=="equateur")
+
+# Extracting scenario information and simulation output 
+scenario_id <- scenario_num <- which(scenario_grid$scenario_name=="No vaccination")
+
+file_name <- paste0("model_run_output_",scenario_num,"eq.rds")
+  
+  # Extracting all parameters from each scenario  
+  n_weeks <- 104
+  total_doses_children <- scenario_grid$total_doses_children[scenario_id]
+  total_doses_adults<- scenario_grid$total_doses_adults[scenario_id]
+  doses_per_day_total <- scenario_grid$doses_per_day_total[scenario_id] 
+  daily_vax_split_children <- scenario_grid$daily_vax_split_children[scenario_id] 
+  vaccine_dose_scenario <- scenario_grid$vaccine_dose_scenario[scenario_id]
+  days_between_doses <- scenario_grid$days_between_doses[scenario_id]
+  prioritisation_children <- scenario_grid$prioritisation_children[scenario_id]
+  prioritisation_adults <- scenario_grid$prioritisation_adults[scenario_id]
+  uptake_realised <- scenario_grid$uptake_realised[scenario_id]
+  vaccine_used<- scenario_grid$vaccine_used[scenario_id]  
+
+  orderly2::orderly_dependency(
+    "run_scenario",
+    quote(latest(  parameter:region == "equateur" &&
+                     parameter:total_doses_adults == environment:total_doses_adults && 
+                     parameter:total_doses_children == environment:total_doses_children && 
+                     parameter:doses_per_day_total == environment:doses_per_day_total &&
+                     parameter:daily_vax_split_children == environment:daily_vax_split_children &&
+                     parameter:vaccine_dose_scenario == environment:vaccine_dose_scenario &&
+                     parameter:days_between_doses == environment:days_between_doses &&
+                     parameter:prioritisation_children == environment:prioritisation_children &&
+                     parameter:prioritisation_adults == environment:prioritisation_adults &&
+                     parameter:uptake_realised == environment:uptake_realised &&
+                     parameter:scenario_num == environment:scenario_num &&
+                     parameter:vaccines_onset == environment:vaccines_onset &&
+                     parameter:vaccine_used == environment:vaccine_used)),
+    files=c("inputs/${file_name}" = paste0("outputs/model_run_output_",scenario_num,".rds")))
+  
+  orderly2::orderly_dependency(
+  name = "pmcmc",
+  query = "latest(parameter:region=='sudkivu')",
+  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
+
+  
+  
+
+  
+  
+# Sud Kivu
+# mean peak date for no vaccine scenario 
+SW_peak_mean <- filter(big_df_sudkivu_start, Category%in%c("cases_inc"))
+peak_date<-SW_peak_mean$TimeStep[which(SW_peak_mean$mean_counter==max(SW_peak_mean$mean_counter))][1]
+# date of peak - Sud Kivu
+SW_peak_mean$date[which(SW_peak_mean$mean_counter==max(SW_peak_mean$mean_counter))][1]
+
+# read in scenario grid 
+orderly2::orderly_shared_resource(DRC_scenario_grid.csv = "DRC_scenario_grid.csv") 
+scenario_grid <- read_csv("DRC_scenario_grid.csv")|>filter(region=="sudkivu")
+
+# Extracting scenario information and simulation output 
+scenario_id <- scenario_num <- which(scenario_grid$scenario_name=="No vaccination")
+file_name <- paste0("model_run_output_",scenario_num,"sk.rds")
+
+  
+     # Extracting all parameters from each scenario  
+  n_weeks <- 104
+  total_doses_children <- scenario_grid$total_doses_children[scenario_id]
+  total_doses_adults<- scenario_grid$total_doses_adults[scenario_id]
+  doses_per_day_total <- scenario_grid$doses_per_day_total[scenario_id] 
+  daily_vax_split_children <- scenario_grid$daily_vax_split_children[scenario_id] 
+  vaccine_dose_scenario <- scenario_grid$vaccine_dose_scenario[scenario_id]
+  days_between_doses <- scenario_grid$days_between_doses[scenario_id]
+  prioritisation_children <- scenario_grid$prioritisation_children[scenario_id]
+  prioritisation_adults <- scenario_grid$prioritisation_adults[scenario_id]
+  uptake_realised <- scenario_grid$uptake_realised[scenario_id]
+  vaccine_used<- scenario_grid$vaccine_used[scenario_id]  
+
+  orderly2::orderly_dependency(
+    "run_scenario",
+    quote(latest(  parameter:region == "sudkivu" &&
+                     parameter:total_doses_adults == environment:total_doses_adults && 
+                     parameter:total_doses_children == environment:total_doses_children && 
+                     parameter:doses_per_day_total == environment:doses_per_day_total &&
+                     parameter:daily_vax_split_children == environment:daily_vax_split_children &&
+                     parameter:vaccine_dose_scenario == environment:vaccine_dose_scenario &&
+                     parameter:days_between_doses == environment:days_between_doses &&
+                     parameter:prioritisation_children == environment:prioritisation_children &&
+                     parameter:prioritisation_adults == environment:prioritisation_adults &&
+                     parameter:uptake_realised == environment:uptake_realised &&
+                     parameter:scenario_num == environment:scenario_num &&
+                     parameter:vaccines_onset == environment:vaccines_onset &&
+                     parameter:vaccine_used == environment:vaccine_used)),
+    files=c("inputs/${file_name}" = paste0("outputs/model_run_output_",scenario_num,".rds")))
+  
+  orderly2::orderly_dependency(
+  name = "pmcmc",
+  query = "latest(parameter:region=='sudkivu')",
+  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
+
+  
+orderly2::orderly_resource("support.R")
+source("support.R")
+
+```
+
+```{r Sud kivu percentage}
+# PMCMC output
+pmcmc_results_s <- readRDS("inputs/samples_sudkivu.RDS")
+fitting_data_s <- readRDS("inputs/fitting_data_sudkivu.RDS")
+pars_tidy_s <- tidy_pars(pmcmc_results_s)
+pars_unpacked_s <- apply(pmcmc_results_s$pars, 2, pmcmc_results_s$packer$unpack)
+
+# Population data
+pop_size <- mpoxseir::parameters_demographic(region="sudkivu")$province_pop
+
+eqauteur_pop_prop <- pop_size$equateur/89561404
+sudkivu_pop_prop <- pop_size$sudkivu/89561404
+
+# Pmcmc output
+SW_population<-pars_tidy_s|>filter(name=="prop_SW")|>mutate(population = pop_size$sudkivu,
+                                                            eligible_pop = sum(mpoxseir::parameters_demographic(region="sudkivu")$N_age[3:10]*sudkivu_pop_prop),
+                              # PBS population - from appendix
+                              pop_pbs = 123113)|>
+ # SW population
+   mutate(pop_sw = ifelse(name=="prop_SW", value * eligible_pop, NA))
+# Add Particle number]
+SW_population<- SW_population|>mutate(Particle=1:nrow(SW_population))
+
+
+# Scenario outputs
+counter_output_sk <- readRDS(paste0("inputs/model_run_output_",scenario_id,"sk.rds")) %>%
+  rename(counter =Value)
+  
+SW_peak_comp <- counter_output_sk |> filter(TimeStep%in%c(1:peak_date), Category%in%c("cases_inc_SW", "cases_inc_PBS"))
+
+# SWs infected 
+infected <- SW_peak_comp |> group_by(Particle, Category) |> summarise(counter=sum(counter)) |> pivot_wider(names_from = Category, values_from = counter)
+
+# calculate percentages 
+infected_precent <- full_join(infected, SW_population, by = "Particle")|>
+  mutate(pbs_percent = cases_inc_PBS/pop_pbs, sw_percent = cases_inc_SW/pop_sw)
+
+# summaraise mean and upper and lower 95% credible intervals 
+infected_precent_summary <- infected_precent |> ungroup()|> summarise(pbs_percent_mean = mean(pbs_percent),
+                                                          pbs_percent_median = median(pbs_percent), 
+                                                          pbs_percent_lower_95_value = quantile(pbs_percent, 0.025, na.rm = TRUE),
+                                                          pbs_percent_upper_95_value = quantile(pbs_percent, 0.975, na.rm = TRUE),
+                                                          sw_percent_mean = mean(sw_percent),
+                                                          sw_percent_median = median(sw_percent), 
+                                                          sw_percent_lower_95_value = quantile(sw_percent, 0.025, na.rm = TRUE),
+                                                          sw_percent_upper_95_value = quantile(sw_percent, 0.975, na.rm = TRUE),
+                                                          sw_pop_mean = mean(pop_sw),
+                                                          sw_pop_median = median(pop_sw), 
+                                                          sw_pop_lower_95_value = quantile(pop_sw, 0.025, na.rm = TRUE),
+                                                          sw_pop_upper_95_value = quantile(pop_sw, 0.975, na.rm = TRUE))
+
+infected_precent_summary*100
+
+
+```
+
+## Bujumbura 
+
+```{r Bujumbura infections set up, include = FALSE}
+
+# mean peak date for no vaccine scenario 
+SW_peak_mean_bu <- filter(big_df_bujumbura_start, Category%in%c("cases_inc"))
+peak_date_bu<-SW_peak_mean_bu$TimeStep[which(SW_peak_mean_bu$mean_counter==max(SW_peak_mean_bu$mean_counter))][1]
+# date of peak - Bujumbura
+SW_peak_mean_bu$date[which(SW_peak_mean_bu$mean_counter==max(SW_peak_mean_bu$mean_counter))][1]
+
+# read in scenario grid 
+orderly2::orderly_shared_resource(scenario_grid_burundi.RDS = "scenario_grid_burundi.RDS") 
+scenario_grid_burundi <- readRDS("scenario_grid_burundi.RDS")
+
+# Extracting scenario information and simulation output 
+scenario_id_bu <- scenario_num <- scenario_grid_burundi$scenario_num[which(scenario_grid_burundi$vaccine_dose_scenario=="no_vaccine")]
+file_name <- paste0("model_run_output_",scenario_id_bu,"bu.rds")
+  
+ # Extracting all parameters from each scenario  
+  n_weeks <- 72
+  total_doses_children <- scenario_grid_burundi$total_doses_children[scenario_id_bu]
+  total_doses_adults<- scenario_grid_burundi$total_doses_adults[scenario_id_bu]
+  doses_per_day_total <- scenario_grid_burundi$doses_per_day_total[scenario_id_bu] 
+  daily_vax_split_children <- scenario_grid_burundi$daily_vax_split_children[scenario_id_bu] 
+  vaccine_dose_scenario <- scenario_grid_burundi$vaccine_dose_scenario[scenario_id_bu]
+  days_between_doses <- scenario_grid_burundi$days_between_doses[scenario_id_bu]
+  prioritisation_children <- scenario_grid_burundi$prioritisation_children[scenario_id_bu]
+  prioritisation_adults <- scenario_grid_burundi$prioritisation_adults[scenario_id_bu]
+  uptake_realised <- scenario_grid_burundi$uptake_realised[scenario_id_bu]
+  scenario_num <- scenario_grid_burundi$scenario_num[scenario_id_bu]         
+
+
+  orderly2::orderly_dependency(
+    "run_scenario_burundi",
+    quote(latest( parameter:short_run == this:short_run &&
+                     parameter:fit_by_age == this:fit_by_age &&
+                     parameter:deterministic == this:deterministic &&
+                     parameter:fit_KPs== this:fit_KPs &&
+                     parameter:total_doses_adults == environment:total_doses_adults && 
+                     parameter:total_doses_children == environment:total_doses_children && 
+                     parameter:doses_per_day_total == environment:doses_per_day_total &&
+                     parameter:daily_vax_split_children == environment:daily_vax_split_children &&
+                     parameter:vaccine_dose_scenario == environment:vaccine_dose_scenario &&
+                     parameter:days_between_doses == environment:days_between_doses &&
+                     parameter:prioritisation_adults == environment:prioritisation_adults &&
+                     parameter:uptake_realised == environment:uptake_realised &&
+                     parameter:vaccines_onset == environment:vaccines_onset &&
+                     parameter:scenario_num == environment:scenario_num)),
+    files=c("inputs/${file_name}" = paste0("outputs/model_run_output_",scenario_id_bu,".rds")))
+  
+orderly2::orderly_dependency(
+  name = "pmcmc_burundi", 
+  query =  "latest()", 
+  files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_burundi.png" = "outputs/traceplots.png"))
+
+  
+orderly2::orderly_resource("support.R")
+source("support.R")
+```
+
+# Percentage of infections at peak 
+
+```{r Bujumbura percentages}
+# PMCMC output
+pmcmc_results_b <- readRDS("inputs/samples_burundi.RDS")
+pars_tidy_b <- tidy_pars(pmcmc_results_b)
+pars_unpacked_b <- apply(pmcmc_results_b$pars, 2, pmcmc_results_b$packer$unpack)
+
+# Population data
+pop_size <- mpoxseir::parameters_demographic(region="bujumbura")$province_pop
+bujumbura_pop_prop<-pop_size$bujumbura/11890781
+# Pmcmc output
+SW_population_bu<-pars_tidy_b|>filter(name=="prop_SW")|>mutate(population = pop_size$bujumbura,
+                                                            eligible_pop  = sum(mpoxseir::parameters_demographic(region="bujumbura")$N_age[3:10]*bujumbura_pop_prop),
+                              # PBS population - from appendix
+                              pop_pbs = 21870)|>
+ # SW population
+   mutate(pop_sw = ifelse(name=="prop_SW", value * eligible_pop, NA))
+# Add Particle number]
+SW_population_bu<- SW_population_bu|>mutate(Particle=1:nrow(SW_population))
+
+
+# Scenario outputs
+counter_output_bu <- readRDS(paste0("inputs/model_run_output_",scenario_id_bu,"bu.rds")) %>%
+  rename(counter =Value)
+  
+SW_peak_comp_bu <- counter_output_bu |> filter(TimeStep%in%c(1:peak_date_bu), Category%in%c("cases_inc_PBS", "cases_inc_SW"))
+
+# SWs infected 
+infected_bu <- SW_peak_comp_bu |> group_by(Particle, Category) |> summarise(counter=sum(counter)) |> pivot_wider(names_from = Category, values_from = counter)
+
+# calculate percentages 
+infected_precent_bu <- full_join(infected_bu, SW_population_bu, by = "Particle")|>
+  mutate(pbs_percent = cases_inc_PBS/pop_pbs, sw_percent = cases_inc_SW/pop_sw)
+
+# summaraise mean and upper and lower 95% credible intervals 
+infected_precent_summary_bu <- infected_precent_bu |> ungroup()|> summarise(pbs_percent_mean = mean(pbs_percent),
+                                                          pbs_percent_median = median(pbs_percent), 
+                                                          pbs_percent_lower_95_value = quantile(pbs_percent, 0.025, na.rm = TRUE),
+                                                          pbs_percent_upper_95_value = quantile(pbs_percent, 0.975, na.rm = TRUE),
+                                                          sw_percent_mean = mean(sw_percent),
+                                                          sw_percent_median = median(sw_percent), 
+                                                          sw_percent_lower_95_value = quantile(sw_percent, 0.025, na.rm = TRUE),
+                                                          sw_percent_upper_95_value = quantile(sw_percent, 0.975, na.rm = TRUE),
+                                                          sw_pop_mean = mean(pop_sw),
+                                                          sw_pop_median = median(pop_sw), 
+                                                          sw_pop_lower_95_value = quantile(pop_sw, 0.025, na.rm = TRUE),
+                                                          sw_pop_upper_95_value = quantile(pop_sw, 0.975, na.rm = TRUE))
+
+infected_precent_summary_bu*100
+
+# percent of total infections that are SW?
+
+pars_unpacked_b[[1]]$N0
+pars_unpacked_b[[1]]$S0
+
+```
+
+
+## Percentage of pop infected at start of data 
+
+```{r infections outside percentages}
+
+# Bujumbura data starts on 595
+pre_start<-big_df_bujumbura_start|>filter(Category%in%c("cases_inc"), date%in%(seq(from = mpoxseir::mpoxseir_date_as_date(490), to =mpoxseir::mpoxseir_date_as_date(594), by = "day")))
+#sum(test$mean_counter)/pop_size$bujumbura
+# 1 in X people:
+pop_size$bujumbura/sum(pre_start$mean_counter)
+
+# Sud Kivu data starts on 371
+  samples <- readRDS("inputs/samples_sudkivu.rds")
+    data <- readRDS("inputs/fitting_data_sudkivu.rds")
+
+    trajectories <- apply(samples$observations$trajectories, c(1, 2), mean_ci)
+    grid <- dimnames(trajectories)
+    grid <- append(grid, values = region, after = 2)
+    
+    names(grid) <- c("name", "state", "region", "date")
+  grid$date <- mpoxseir::mpoxseir_date_as_date(sort(unique(data$data$date)))
+  fits <- expand.grid(grid)
+  
+  fits$value <- c(trajectories)
+  fits_wide<-fits%>%pivot_wider(names_from = name, values_from = value)|>
+    rename(Category=state, mean_counter=mean, lower_95_counter=q2.5, upper_95_counter=q97.5)
+  
+pre_start_sk<-fits_wide|>filter(Category%in%c("cases_inc"), date%in%(seq(from = mpoxseir::mpoxseir_date_as_date(280), to = mpoxseir::mpoxseir_date_as_date(370), by = "day")))
+# 1 in X people:
+pop_size$sudkivu/sum(pre_start_sk$mean_counter)
+
+
+```
+
+## Percentage of infections outside sexual networks
+
+```{r infections outside percentages}
+
+# Bujumbura
+counter_output_eq <- readRDS(paste0("inputs/model_run_output_",scenario_id,"eq.rds")) %>%
+  rename(counter =Value)
+outside_inf_eq <- counter_output_eq |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
+
+sum_outside_inf_eq<-outside_inf_eq|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
+
+percentage_outside_inf_eq <- sum_outside_inf_eq|> ungroup() |> summarise( mean_outside=mean(percent_outside),  lower_outside=quantile(percent_outside, 0.025), upper_outside=quantile(percent_outside, 0.975), median_inside=median(percent_inside), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
+
+percentage_outside_inf_eq*100
+
+# Sud Kivu
+counter_output_sk <- readRDS(paste0("inputs/model_run_output_",scenario_id,"sk.rds")) %>%
+  rename(counter =Value)
+outside_inf_sk <- counter_output_sk |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
+
+sum_outside_inf_sk<-outside_inf_sk|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
+
+percentage_outside_inf_sk <- sum_outside_inf_sk|> ungroup() |> summarise(median_outside=median(percent_outside), mean_outside=mean(percent_outside),  lower_outside=quantile(percent_outside, 0.025), upper_outside=quantile(percent_outside, 0.975),median_inside=median(percent_inside), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
+
+percentage_outside_inf_sk*100
+
+# Bujumbura
+counter_output_bu <- readRDS(paste0("inputs/model_run_output_",scenario_id,"bu.rds")) %>%
+  rename(counter =Value)
+outside_inf_bu <- counter_output_bu |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
+
+sum_outside_inf_bu<-outside_inf_bu|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
+
+percentage_outside_inf_bu <- sum_outside_inf_bu|> ungroup() |> summarise(median_outside=median(percent_outside), mean_outside=mean(percent_outside), lower_outside=quantile(percent_outside, 0.025),upper_outside=quantile(percent_outside, 0.975), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
+
+percentage_outside_inf_bu*100
+
+```
+
+## All regions - totals
+
+
+```{r total percent}
+equateur_max_cases<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+
+sudkivu_max_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+
+bujumbura_max_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c(44:49))
+ # total cases averted 
+total_cases_averted<-equateur_max_cases$mean_averted+
+  sudkivu_max_cases$mean_averted+
+  bujumbura_max_cases$mean_averted
+# total baseline cases
+total_cases_no_vaccine<-equateur_max_cases$mean_counter+
+  sudkivu_max_cases$mean_counter+
+  bujumbura_max_cases$mean_counter
+# percentage of cases averted
+print("Total percentage of cases averted:")
+(total_cases_averted/total_cases_no_vaccine)*100
+
+
+equateur_max_deaths<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+
+sudkivu_max_deaths<-filter(big_df_sudkivu_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+
+ # total deaths averted 
+total_deaths_averted<-equateur_max_deaths$mean_averted+
+  sudkivu_max_deaths$mean_averted
+# total deaths no vaccine
+total_deaths_no_vaccine<-equateur_max_deaths$mean_counter+
+  sudkivu_max_deaths$mean_counter
+# percentage of deaths averted
+print("Total percentage of deaths averted:")
+(total_deaths_averted/total_deaths_no_vaccine)*100
+
+
+# total doses
+print("Total doses administered:")
+total_doses_administered<-equateur_max_cases$mean_cumulative_doses+
+  sudkivu_max_cases$mean_cumulative_doses+
+  bujumbura_max_cases$mean_cumulative_doses
+total_doses_administered
+print("Total doses available:")
+total_doses_available<-equateur_max_cases$total_doses_children+
+  sudkivu_max_cases$total_doses_adults+
+  bujumbura_max_cases$total_doses_adults
+total_doses_available
+```
+
+
+```{r R0 all regions set up, include=FALSE}
+orderly2::orderly_dependency(
+  name = "pmcmc",
+  query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == 'standard')",
+  files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds",
+            "outputs/traceplots_equateur.png" = "outputs/traceplots.png"))
+pmcmc_results_e <- readRDS("inputs/samples_equateur.RDS")
+fitting_data_e <- readRDS("inputs/fitting_data_equateur.RDS")
+fitting_data_e <- fitting_data_e$data |> mutate(region="equateur") |> dplyr::select(date, cases_total, region)
+pars_tidy_e <- tidy_pars(pmcmc_results_e)
+
+```
+
+
+```{r Rt mean}
+# Sud Kivu
+Rt_sudkivu <- big_df_sudkivu_start|>filter(Category%in%c("Rt"), scenario_new=="A: LC16m8", scenario_num==50)
+#range
+range(Rt_sudkivu$mean_counter)
+# first time step
+Rt_sudkivu$mean_counter[1]
+
+
+# Equateur
+Rt_equateur <- big_df_equateur_start|>filter(Category%in%c("Rt"), scenario_new=="A: LC16m8", scenario_num==50)
+#range
+range(Rt_equateur$mean_counter)
+# first time step
+Rt_equateur$mean_counter[1]
+
+
+```
+
+
+
+# Transmission route percentages
+
+```{r transmission}
+    # unpack results
+    pars_unpacked_e <- apply(pmcmc_results_e$pars, 2, pmcmc_results_e$packer$unpack)
+    pars_unpacked_s <- apply(pmcmc_results_s$pars, 2, pmcmc_results_s$packer$unpack)
+    pars_unpacked_b <- apply(pmcmc_results_b$pars, 2, pmcmc_results_b$packer$unpack)
+    
+    state_e <- extract_state(pars_unpacked_e, region = "equateur", pmcmc_results=pmcmc_results_e) 
+    state_s <- extract_state(pars_unpacked_s, region = "sudkivu", pmcmc_results=pmcmc_results_s) 
+    state_b <- extract_state(pars_unpacked_b, region = "burundi", pmcmc_results=pmcmc_results_b) 
+       
+  
+state_tidy <- rbind(state_e, state_s, state_b) |> 
+      group_by(region, particle) |> 
+      mutate(prop = value / sum(value)) |>
+      rowwise() |>
+      mutate(region = nms_region[region]) |>
+        group_by(state, region) |>
+      summarise(median_prop=median(prop), mean_prop = mean(prop),
+                lower_prop=quantile(prop, 0.025), upper_prop=quantile(prop, 0.975))
+  
+ # Equateur zoonotic transmission percentage
+  state_tidy|>filter(region=="Equateur", state=="Zoonotic")|>tibble()
+  
+# Equateur average zoonotic infections 
+ daily_zoonotic_equateur<- extract_daily_zoonotic_region(pars_unpacked_e, region = "equateur", both=FALSE)
+  print("Avergae zoonotic infections over all age groups:")
+ daily_zoonotic_equateur|>filter(!group%in%(c("CSW","ASW","PBS","HCW")))|>summarise(sum=sum(mean))
+ 
+  
+```
+
+
+## CFR - by age groups 
+
+```{r cfr lower percent}
+
+# historic clade 1 b
+both=FALSE
+cfr_prior_summary <- extract_cfr_by_age(pars_unpacked_e, region="equateur", both=both, summarise = FALSE, name = "CFR_0") 
+# mean clode 1 over all age groups
+print("Mean clade 1 historic over all age groups")
+mean(cfr_prior_summary[1:16,1], na.rm=TRUE)
+
+## # percentage lower than historic 
+
+# EQUATEUR
+cfr_equateur <- extract_cfr_by_age(pars_unpacked_e, region="equateur", both=both, summarise = FALSE, name = "CFR")[1:16,1:1000]|>tibble()
+
+percent_lower_eq<-(cfr_prior_summary[1:16,1:1000]-cfr_equateur)/cfr_prior_summary[1:16,1:1000]
+
+percent_lower_eq_mean_over_age <- apply(percent_lower_eq, 2, mean)
+
+print("Equateur: % lower than prior")
+#mean of means over particles
+mean(percent_lower_eq_mean_over_age)
+# lower quantile of means over particles
+quantile(percent_lower_eq_mean_over_age, 0.025)
+# upper quantile of means over particles
+quantile(percent_lower_eq_mean_over_age, 0.975)
+
+# SUD KIVU 
+cfr_sudkivu <- extract_cfr_by_age(pars_unpacked_s, region="sudkivu", both=both, summarise = FALSE, name = "CFR")[1:16,1:1000]|>tibble()
+
+percent_lower_sk<-(cfr_prior_summary[1:16,1:1000]-cfr_sudkivu)/cfr_prior_summary[1:16,1:1000]
+
+percent_lower_sk
+percent_lower_sk_mean_over_age <- apply(percent_lower_sk, 2, mean)
+
+print("Sud Kivu: % lower than prior")
+#mean of means over particles
+mean(percent_lower_sk_mean_over_age)
+# lower quantile of means over particles
+quantile(percent_lower_sk_mean_over_age, 0.025)
+# upper quantile of means over particles
+quantile(percent_lower_sk_mean_over_age, 0.975)
+
+# Summaries by age group
+# EQUATEUR
+extract_cfr_by_age(pars_unpacked_e, region="equateur", both=both, summarise = TRUE, name = "CFR")|>mutate(region="equateur")
+# SUD KIVU
+extract_cfr_by_age(pars_unpacked_s, region="sudkivu", both=both, summarise = TRUE, name = "CFR")|>mutate(region="sudkivu")
+
+
+```
+
+
+
+```{r cfr crude}
+
+# crude CFR deaths/case
+print("Crude CFR from Equateur data:")
+sum(fitting_data_equateur$data$deaths, na.rm = TRUE)/sum(fitting_data_equateur$data$cases, na.rm=TRUE)
+print("Crude CFR from Sud Kivu data:")
+sum(fitting_data_sudkivu$data$deaths, na.rm = TRUE)/sum(fitting_data_sudkivu$data$cases, na.rm=TRUE)
+
+# cases Bujumbura/cases burundi 
+sum(fitting_data_bujumbura$data$cases, na.rm=TRUE)/sum(fitting_data_bujumbura$data$cases_binom, na.rm=TRUE)
+
+```
+

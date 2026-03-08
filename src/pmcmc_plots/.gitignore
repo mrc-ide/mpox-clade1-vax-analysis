@@ -1,0 +1,5 @@
+inputs
+outputs
+color_palette.R
+mcmc_diagnostics.R
+diagnostic_plots.R

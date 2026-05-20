@@ -33,10 +33,12 @@ check_region(region)
 check_mixing_matrix(mixing_matrix)
 check_assumptions(assumptions)
 
-orderly2::orderly_dependency(name = "data_drc", "latest()",
-                             files =  c("inputs/data.rds" = "outputs/fitting_data.rds",
-                                        "inputs/data_who_shiny.rds" = "outputs/who_data.rds",
-                                        "inputs/data_linelist.rds" = "outputs/cases.rds"))
+orderly2::orderly_dependency(name = "clean_drc_surveillance", "latest()",
+                             files =  c("inputs/data.rds" = "outputs/fitting_data.rds"))
+orderly2::orderly_dependency(name = "analyse_drc_linelist", "latest()",
+                             files =  c("inputs/data_linelist.rds" = "outputs/cases.rds"))
+orderly2::orderly_dependency(name = "data_extracted_drc", "latest()",
+                             files =  c("inputs/data_who_shiny.rds" = "outputs/data.rds"))
 
 type <- if (deterministic) "deterministic" else "stochastic"
 
@@ -97,7 +99,7 @@ filter <- create_filter(data, deterministic, region, start_date, control)
 packer <- create_packer(region, assumptions, mixing_matrix)
 
 pmcmc_results <- run_pmcmc(filter, packer, mcmc_pars, control$pmcmc,
-                           deterministic, region, snapshots)
+                           deterministic, region, snapshots, assumptions)
 
 dir.create("outputs", FALSE, TRUE)
 

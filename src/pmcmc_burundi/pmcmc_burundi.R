@@ -20,19 +20,20 @@ source("calc-Rt.R")
 
 orderly_pars <- orderly2::orderly_parameters(deterministic = TRUE,
                                              mixing_matrix = "Zimbabwe",
-                                             short_run = TRUE)
+                                             short_run = TRUE,
+                                             assumptions = "standard")
 list2env(orderly_pars, environment())
 
 check_mixing_matrix(mixing_matrix)
 
-orderly2::orderly_dependency(name = "data_burundi", "latest()",
+orderly2::orderly_dependency(name = "create_timeseries_burundi", "latest()",
                              files =  c("inputs/data.rds" = "outputs/pmcmc_data.rds"))
 
 r <- "bujumbura"
 for (type in c("deterministic", "stochastic")) {
   orderly2::orderly_resource(
-    c(paste("parameters", r, type, "info.csv", sep = "/"),
-      paste("parameters", r, type, "proposal.csv", sep = "/")))
+    c(paste("parameters", r, type, assumptions, "info.csv", sep = "/"),
+      paste("parameters", r, type, assumptions, "proposal.csv", sep = "/")))
   
 }
 
@@ -64,7 +65,8 @@ raw_data <- readRDS("inputs/data.rds")
 
 data <- get_data(raw_data, start_date, end_date)
 
-mcmc_pars <- create_mcmc_pars(deterministic, region = r)
+mcmc_pars <- create_mcmc_pars(deterministic, region = r,
+                              assumptions = assumptions)
 
 n_chains <- 4
 if (short_run) {
@@ -89,10 +91,10 @@ control <- fit_control(deterministic, n_steps = n_steps, n_burnin = n_burnin,
                        n_particles = n_particles)
 
 filter <- create_filter(data, deterministic, start_date, control)
-packer <- create_packer(mixing_matrix, region = r)
+packer <- create_packer(mixing_matrix, region = r, assumptions = assumptions)
 
 pmcmc_results <- run_pmcmc(filter, packer, mcmc_pars, control$pmcmc,
-                           deterministic, snapshots)
+                           deterministic, snapshots, assumptions)
 
 dir.create("outputs", FALSE, TRUE)
 

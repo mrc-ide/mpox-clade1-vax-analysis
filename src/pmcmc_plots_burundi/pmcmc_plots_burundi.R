@@ -2,7 +2,8 @@
 
 orderly_pars <- orderly2::orderly_parameters(short_run = FALSE,
                                              deterministic = FALSE,
-                                             mixing_matrix = "Zimbabwe")
+                                             mixing_matrix = "Zimbabwe",
+                                             assumptions = "standard")
 list2env(orderly_pars, environment())
 orderly2::orderly_shared_resource("color_palette.R")
 source("color_palette.R")
@@ -10,7 +11,7 @@ source("color_palette.R")
 # inputs
 orderly2::orderly_dependency(
   name = "pmcmc_burundi",
-  "latest(parameter:deterministic == this:deterministic && parameter:mixing_matrix == this:mixing_matrix && parameter:short_run == this:short_run)",
+  "latest(parameter:deterministic == this:deterministic && parameter:mixing_matrix == this:mixing_matrix && parameter:short_run == this:short_run && parameter:assumptions == this:assumptions)",
   files = c("inputs/samples.rds" = "outputs/samples.rds",
             "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
 

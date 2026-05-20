@@ -36,24 +36,48 @@ for (package in requiredPackages_GH) {
 # set the parameters
 fit_by_age <- TRUE
 fit_KPs <- TRUE
-region <- "bujumbura" 
+region <- "bujumbura" #bujumbura?
 use_both_fit <- FALSE
 deterministic <- FALSE
 short_run <- FALSE
 mixing_matrix <- "Zimbabwe"
 vaccines_onset <- "start"
+assumptions <-"fix_prop_SW"
+
+# run locally ...
+orderly2::orderly_run("pmcmc_burundi",
+                      parameters = list(mixing_matrix = mixing_matrix,
+                                        deterministic = deterministic,
+                                        short_run = TRUE))
 
 
-# run locally ... full run
+# local long run in an emergency
+# Note this is not recommended and should be done on a HPCU if available.
+
 orderly2::orderly_run("pmcmc_burundi",
                       parameters = list(mixing_matrix = mixing_matrix,
                                         deterministic = deterministic,
                                         short_run = FALSE))
 
+# ... or pull an example from share drive 
+# note - check the parameters for what you are pulling
+orderly2::orderly_location_pull(
+  quote(parameter:short_run == FALSE &&
+          parameter:mixing_matrix == "Zimbabwe" &&
+          parameter:deterministic == FALSE &&
+          parameter:assumptions == "fix_prop_SW"
+        #parameter:region == "burundi" &&
+        #parameter:fit_by_age == TRUE &&
+        #parameter:fit_KPs==TRUE
+  ),
+  name = "pmcmc_burundi")
+
+
 #----------------------####
 # Step 2: pmcmc plots 
 #----------------------####
 
+# run locally ...
 # check you have an output from step 3 that matches your parameters
 orderly2::orderly_search(orderly2::orderly_query(quote(parameter:short_run == FALSE &&
                                                          parameter:mixing_matrix == "Zimbabwe" &&
@@ -64,7 +88,11 @@ orderly2::orderly_run("pmcmc_plots_burundi",
                                         short_run = short_run,
                                         mixing_matrix = mixing_matrix))
 
-
+# Create fitting plot
+orderly2::orderly_run("plot_burundi_cases_vs_model",
+                      parameters = list(mixing_matrix = mixing_matrix,
+                                        deterministic = deterministic,
+                                        short_run = FALSE))
 
 #--------------------------------####
 # Step 3: set up scenarios to run
@@ -77,9 +105,10 @@ orderly2::orderly_search(orderly2::orderly_query(quote(parameter:mixing_matrix =
                                                  name = "pmcmc_burundi"))
 
 # set up scenarios to run
-scenario_grid_burundi <-  read.csv("./shared/Burundi_scenario_grid.csv") 
+scenario_grid_burundi <-  read.csv("./shared/Burundi_dailydose.csv") 
 
-# convert daily doses to have a minimum week long vaccine roll out
+# Convert daily doses to have a minimum week long vaccine roll out
+scenario_grid_burundi<-scenario_grid_burundi|>mutate(scenario_doses_per_day_total=doses_per_day_total)
 scenario_grid_burundi$doses_per_day_total<-sapply(
   1:nrow(scenario_grid_burundi),
   function(x) floor(min(scenario_grid_burundi$doses_per_day_total[x], 
@@ -95,48 +124,52 @@ scenario_grid_burundi |>
          prioritisation_children = as.character(prioritisation_children),
          uptake_realised=as.numeric(uptake_realised))-> scenario_grid_burundi
 
+#scenario_grid_burundi<-scenario_grid_burundi[c(1,50:55),]
 scenario_grid_burundi$scenario_num <- 1:nrow(scenario_grid_burundi)
 scenario_grid_burundi <- scenario_grid_burundi |> mutate(scenario_new = scenario_name)
 
-# save this scenario grid subset to the shared folder for later tasks to read in
+# save this scenario grid subset to the share drive for later tasks to read in
 saveRDS(scenario_grid_burundi, file = "./shared/scenario_grid_subset_burundi.RDS") 
 
 
+
 #--------------------------------####
-# Step 4: run
+# Step 4: run scenarios
 #--------------------------------####
 
-# set working directory to run_scenario_burundi
-scenario_plots <- scenario_grid_burundi
 
-for (i in 1:nrow(scenario_plots)) {
-orderly2::orderly_run(
-  "run_scenario_burundi",
-  parameters = with(scenario_plots,
-                    list(deterministic = deterministic,
-                    short_run = short_run,
-                    mixing_matrix=mixing_matrix,
-                    vaccines_onset = vaccines_onset,
-                    vaccine_used = vaccine_used,
-                    t_ve=t_ve[i],
-                    total_doses_children=total_doses_children[i],
-                    total_doses_adults=total_doses_adults[i],
-                    doses_per_day_total=doses_per_day_total[i],
-                    daily_vax_split_children=daily_vax_split_children[i],
-                    vaccine_dose_scenario =vaccine_dose_scenario[i],
-                    days_between_doses = days_between_doses[i],
-                    prioritisation_children =prioritisation_children[i],
-                    prioritisation_adults = prioritisation_adults[i],
-                    uptake_realised = uptake_realised[i],
-                    scenario_num = scenario_num[i]
-                    )))
+# main analysis
+for (i in 1:nrow(scenario_grid_burundi)) {
+  orderly2::orderly_run(
+    "run_scenario_burundi",
+    parameters = with(scenario_grid_burundi,
+                      list(deterministic = deterministic,
+                           short_run = short_run,
+                           mixing_matrix=mixing_matrix,
+                           vaccines_onset = vaccines_onset,
+                           vaccine_used = vaccine_used,
+                           t_ve=t_ve[i],
+                           total_doses_children=total_doses_children[i],
+                           total_doses_adults=total_doses_adults[i],
+                           doses_per_day_total=doses_per_day_total[i],
+                           daily_vax_split_children=daily_vax_split_children[i],
+                           vaccine_dose_scenario =vaccine_dose_scenario[i],
+                           days_between_doses = days_between_doses[i],
+                           prioritisation_children =prioritisation_children[i],
+                           prioritisation_adults = prioritisation_adults[i],
+                           uptake_realised = uptake_realised[i],
+                           scenario_num = scenario_num[i]
+                      )))
 }
 
 
 #-------------------------------------####
-# Step 5: Plot multiple scenarios runs 
+# Step 5: post process for scenario plots
 #-------------------------------------####
 
+# Post process all the orderly outputs run on the cluster to create one big data frame with outputs of interest 
+
+# run locally ...
 orderly2::orderly_run("run_postprocess_burundi",
                       parameters= list(deterministic = deterministic,
                                        vaccines_onset = vaccines_onset,

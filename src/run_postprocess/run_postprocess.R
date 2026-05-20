@@ -5,11 +5,12 @@ library(tidyr)
 orderly_pars <- orderly2::orderly_parameters(region = "sudkivu",
                                              use_both_fit = FALSE,
                                              deterministic = FALSE,
+                                             assumptions = "standard",
                                              short_run = FALSE,
                                              fit_by_age = TRUE,
                                              fit_KPs=TRUE, 
                                              R0_SW_reduction=0, # percentage reduction in SW R0
-                                             vaccines_onset="start")  
+                                             vaccines_onset="start")  # projections onset "start"/"end" - or snapshot date?
 list2env(orderly_pars, environment())
 
 region_fit <- if (use_both_fit) "both" else region
@@ -54,6 +55,7 @@ for (i in 1:nrow(scenario_grid)) {
                      parameter:short_run == this:short_run &&
                      parameter:fit_by_age == this:fit_by_age &&
                      parameter:deterministic == this:deterministic &&
+                     parameter:assumptions == this:assumptions &&
                      parameter:fit_KPs== this:fit_KPs &&
                      parameter:use_both_fit == this:use_both_fit &&
                      parameter:total_doses_adults == environment:total_doses_adults && 
@@ -200,6 +202,7 @@ if(vaccines_onset=="start"){
   orderly2::orderly_dependency(name = "pmcmc",
                                "latest(parameter:region == environment:region_fit && 
                                parameter:deterministic == this:deterministic && 
+                               parameter:assumptions == this:assumptions &&
                                parameter:fit_by_age == this:fit_by_age &&
                                parameter:fit_KPs == this:fit_KPs &&
                                parameter:short_run == this:short_run)",
@@ -236,7 +239,6 @@ if(vaccines_onset=="start"){
     mutate(mean_counter = if_else(is.na(mean_counter.y), mean_counter.x, mean_counter.y),
            lower_95_counter = if_else(is.na(lower_95_counter.y), lower_95_counter.x, lower_95_counter.y),
            upper_95_counter = if_else(is.na(upper_95_counter.y), upper_95_counter.x, upper_95_counter.y))|>
-    mutate(mean_counter=mean_counter.y, lower_95_counter=lower_95_counter.y, upper_95_counter=upper_95_counter.y)|>
     select(-mean_counter.y,-mean_counter.x,-lower_95_counter.y,-lower_95_counter.x,-upper_95_counter.y,-upper_95_counter.x)
 
   }

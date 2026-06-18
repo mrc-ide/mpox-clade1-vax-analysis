@@ -1148,6 +1148,63 @@ paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_s
 
 ```
 
+## Eqauteur, 130,000 doses/5,000 doses per day - one and fractional dose MVA no priority
+
+```{r eqauteur fractional, echo=FALSE, warning=FALSE, message=FALSE }
+
+print("one full dose")
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="F: MVA-BN",
+                           scenario_dose==130000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+
+
+print("one fractional dose")
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="I: MVA-BN + fractional",
+                           scenario_dose==130000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+
+```
+
 
 ## Sud Kivu, 2 million doses - MVA-BN single dose + SWs first + fractional
 
@@ -1711,6 +1768,117 @@ sudkivu_nopriority_scenario$mean_averted_per_dose
 print("95% CrI interval:")
 paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
 ```
+
+## fractional SK 
+
+```{r sud kivu fractional, echo=FALSE, warning=FALSE, message=FALSE}
+print("one full dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN"),
+                          scenario_dose==500000,
+                                              scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("one fractional dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("I: MVA-BN + fractional"),
+                          scenario_dose==500000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## fractional SK 2 million
+
+```{r sud kivu fractional, echo=FALSE, warning=FALSE, message=FALSE}
+print("one full dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN"),
+                          scenario_dose==2000000,
+                                              scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("Mean doses given:")
+sudkivu_nopriority_scenario$mean_cumulative_doses
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_cumulative_doses, ", ", sudkivu_nopriority_scenario$upper_95_cumulative_doses, "]")
+
+print("one fractional dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("I: MVA-BN + fractional"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("Mean doses given:")
+sudkivu_nopriority_scenario$mean_cumulative_doses
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_cumulative_doses, ", ", sudkivu_nopriority_scenario$upper_95_cumulative_doses, "]")
+```
+
 
 ## Transmission route percentages
 

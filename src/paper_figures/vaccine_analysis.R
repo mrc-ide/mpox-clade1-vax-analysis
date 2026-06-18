@@ -4,10 +4,11 @@ orderly2::orderly_parameters(short_run = FALSE,
                              deterministic = FALSE,
                              mixing_matrix = "Zimbabwe",
                              fit_KPs = TRUE, 
-                             assumptions = "fix_prop_SW",
+                             assumptions = "standard",
                              vaccines_onset = "start")
 
 # Load in all dependencies 
+if(assumptions=="fix_prop_SW"){
 orderly2::orderly_dependency(
   name = "pmcmc",
   query = "latest(parameter:region=='sudkivu' && parameter:assumptions == 'fix_prop_SW')",
@@ -49,6 +50,45 @@ orderly2::orderly_dependency(name = "pmcmc_burundi",
                              parameter:assumptions == 'fix_prop_SW')",
                              files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                         "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
+}else{
+  orderly2::orderly_dependency(
+    name = "pmcmc",
+    query = "latest(parameter:region=='sudkivu')",
+    files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
+              "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
+  orderly2::orderly_dependency(
+    name = "pmcmc",
+    query = "latest(parameter:region=='equateur')",
+    files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
+              "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
+  orderly2::orderly_dependency(name = "run_postprocess",
+                               "latest(parameter:region =='sudkivu' && 
+                                     parameter:deterministic == FALSE && 
+                                     parameter:use_both_fit == FALSE && 
+                                     parameter:fit_by_age == TRUE && 
+                                     parameter:fit_KPs == TRUE &&
+                                     parameter:short_run == FALSE && 
+                                     parameter:vaccines_onset == 'start')",
+                               files=c("inputs/runs_postprocess_sudkivu.RDS" = "outputs/runs_postprocess.RDS"))
+  orderly2::orderly_dependency(name = "run_postprocess",
+                               "latest(parameter:region =='equateur' && 
+                                     parameter:deterministic == FALSE && 
+                                     parameter:use_both_fit == FALSE && 
+                                     parameter:fit_by_age == TRUE && 
+                                     parameter:fit_KPs == TRUE &&
+                                     parameter:short_run == FALSE && 
+                                     parameter:vaccines_onset == 'start' )",
+                               files=c("inputs/runs_postprocess_equateur.RDS" = "outputs/runs_postprocess.RDS"))
+  orderly2::orderly_dependency(name = "run_postprocess_burundi",
+                               "latest(parameter:deterministic == FALSE && 
+                             parameter:short_run == FALSE )",
+                               files=c("inputs/runs_postprocess_burundi.RDS" = "outputs/runs_postprocess.RDS"))
+  
+  orderly2::orderly_dependency(name = "pmcmc_burundi",
+                               "latest(parameter:deterministic == FALSE && parameter:short_run == FALSE)",
+                               files =  c("inputs/samples.rds" = "outputs/samples.rds",
+                                          "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
+}
 # Populations of provinces
 province_pop<-mpoxseir::parameters_demographic(region="sudkivu")$province_pop
 
@@ -192,6 +232,33 @@ big_df_equateur <-  readRDS("inputs/runs_postprocess_equateur.RDS") |>
                                                  levels=c("   250","   500"," 1,000",
                                                           " 2,500"," 5,000","10,000", "20,000")))
 
+## Account for different dose numbers in fractional dosing for per dose calculations
+big_df_equateur <- mutate(big_df_equateur, 
+                          mean_averted_per_dose  = case_when(
+  scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+  .default=mean_averted_per_dose
+), 
+median_averted_per_dose  = case_when(
+  scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+  .default=median_averted_per_dose
+), 
+lower_averted_95_per_dose  = case_when(
+  scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+  .default=lower_averted_95_per_dose
+), 
+upper_averted_95_per_dose  = case_when(
+  scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+  scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+  .default=upper_averted_95_per_dose
+)
+)
 
 # Plot max dose & middle daily dose total scenario
 big_df_plots_eq <- filter(big_df_equateur,
@@ -409,6 +476,33 @@ big_df_sudkivu <-  readRDS("inputs/runs_postprocess_sudkivu.RDS") |>
                                                  levels=c("   250","   500"," 1,000",
                                                           " 2,500"," 5,000","10,000", "20,000")))
 
+## Account for different dose numbers in fractional dosing for per dose calculations
+big_df_sudkivu <- mutate(big_df_sudkivu, 
+                          mean_averted_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+                            .default=mean_averted_per_dose
+                          ), 
+                          median_averted_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+                            .default=median_averted_per_dose
+                          ), 
+                          lower_averted_95_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+                            .default=lower_averted_95_per_dose
+                          ), 
+                          upper_averted_95_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+                            .default=upper_averted_95_per_dose
+                          )
+)
 # Plot max dose scenario and middle daily doses 
 big_df_plots_sk <- filter(big_df_sudkivu,
                           scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)])|>
@@ -646,6 +740,33 @@ big_df_bujumbura <-  readRDS("inputs/runs_postprocess_burundi.RDS") |>
                                                  levels=c("   25","   50","  100","  250","  500","1,000", "2,000")))
 
 
+## Account for different dose numbers in fractional dosing for per dose calculations
+big_df_bujumbura <- mutate(big_df_bujumbura, 
+                         mean_averted_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+                           .default=mean_averted_per_dose
+                         ), 
+                         median_averted_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+                           .default=median_averted_per_dose
+                         ), 
+                         lower_averted_95_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+                           .default=lower_averted_95_per_dose
+                         ), 
+                         upper_averted_95_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+                           .default=upper_averted_95_per_dose
+                         )
+)
 # Plot max dose scenario
 big_df_plots_bu <- filter(big_df_bujumbura,
                           scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)])|>
@@ -1116,21 +1237,22 @@ bu_heatmap_data_extended <- sensitivity_data_bu_DD|>group_by(scenario_dose, scen
 ############################## MAIN FIGURES ####################################
 ## EQUATEUR - FIGURE 3
 ## % infections averted
-fig3a <- ggplot(data=sensitivity_data_eq, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), 
+fig3a <- ggplot(data=sensitivity_data_eq)+
+  geom_point(aes(x=dose_character, y=mean_percent,shape=scenario_priority, colour=scenario_vaccine,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), 
              size=2.75, stroke=1.2, alpha=0.75, position = position_dodge(width = 0.975))+
+  scale_shape_manual(name="Priority", values=shape_priority)+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
   geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, 
-                    ymax=upper_95_percent, colour=scenario_vaccine),width = 0,
+                    ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0,
                 alpha=0.65, linewidth = 0.9, 
                 position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_eq$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of infections averted", title="Equateur")+
   scale_y_continuous(labels = scales::percent)+
-  scale_x_discrete()+
-  scale_shape_manual(name="Priority", values=shape_priority)+
   theme(legend.text = element_text(size=13),
         axis.text = element_text(size=14),
         plot.subtitle = element_text(size=15),
@@ -1141,10 +1263,11 @@ fig3a <- ggplot(data=sensitivity_data_eq, aes(group=scenario_labels))+
         legend.box = "vertical") +
   guides(color = guide_legend(ncol = 4)) +
   guides(shape = guide_legend(ncol = 3))
+
 fig3a
 
 ggsave(paste0("outputs/rerun/fig3a.png"), fig3a,
-       width = 10, height = 6)
+       width = 12, height = 6)
 
 
 # best case scenario for each dose number 
@@ -1204,7 +1327,7 @@ fig3 <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.5,1,1.25),align="v")
 ggsave(paste0("outputs/rerun/Figure3.png"), fig3,
-       width = 15, height = 18, scale=1.5, units="cm")
+       width = 18, height = 20, scale=1.5, units="cm")
 
 
 equateur_heatmap_maxdoses_vaccine <- ggplot(eq_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
@@ -1230,16 +1353,18 @@ equateur_heatmap_maxdoses_vaccine <- ggplot(eq_heatmap_data, aes(x=dose_thousand
 
 ## % deaths averted
 fig3a_deaths <- ggplot(data=sensitivity_data_eq_deaths, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
   geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, 
-                    ymax=upper_95_percent, colour=scenario_vaccine),width = 0,
+                    ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0,
                 alpha=0.65, linewidth = 0.9, 
                 position = position_dodge(width = 0.975))+ 
   theme_minimal()+
 
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_eq_deaths$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of deaths averted", title="Equateur")+
   scale_y_continuous(labels = scales::percent)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1313,7 +1438,7 @@ fig3_deaths <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.5,1,1.25),align="v")
 ggsave(paste0("outputs/rerun/Figure3_Deaths.png"), fig3_deaths,
-       width = 15, height = 18, scale=1.5, units="cm")
+       width = 18, height = 20, scale=1.5, units="cm")
 
 
 
@@ -1342,12 +1467,14 @@ equateur_heatmap_maxdoses_vaccine_deaths <- ggplot(eq_heatmap_data_deaths, aes(x
 
 ## line plot of percentage of vaccines averted
 fig4a<-ggplot(data=sensitivity_data_sk, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_sk$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of infections averted", title="Sud Kivu")+
   scale_y_continuous(labels = scales::percent)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1363,7 +1490,7 @@ fig4a<-ggplot(data=sensitivity_data_sk, aes(group=scenario_labels))+
   guides(shape = guide_legend(ncol = 3))
 
 ggsave(paste0("outputs/rerun/fig4a.png"), fig4a,
-       width = 10, height = 6)
+       width = 12, height = 6)
 
 # best case scenario for dose numbers 
 fig4b <- best_case_scenario_sk |> 
@@ -1422,7 +1549,7 @@ fig4 <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.5,1,1.25),align="v")
 ggsave(paste0("outputs/rerun/Figure4.png"), fig4,
-       width = 15, height = 18, scale=1.5, units="cm")
+       width = 18, height = 20, scale=1.5, units="cm")
 
 
 sudkivu_heatmap_maxdoses_vaccine <- ggplot(sk_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
@@ -1448,12 +1575,14 @@ sudkivu_heatmap_maxdoses_vaccine <- ggplot(sk_heatmap_data, aes(x=dose_thousands
 
 ## line plot of percentage of vaccines averted
 fig4a_deaths <-ggplot(data=sensitivity_data_sk_deaths, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_sk_deaths$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of deaths averted", title="Sud Kivu")+
   scale_y_continuous(labels = scales::percent)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1502,11 +1631,10 @@ sudkivu_heatmap_deaths <- ggplot(sk_heatmap_data_deaths, aes(x=dose_thousands, y
   facet_wrap(~scenario_priority)+
   labs(x="Available full doses (thousands)", y="Doses per day", subtitle="Percentage of deaths averted",
        title=NULL, fill=NULL) +
-  scale_fill_gradientn(colors = c(brewer.pal(n = 5, name = "Purples")),
-                       limits = c(0,1),
-                       labels = scales::percent,
-                       name = NULL # Fixed range for colour scale
-  ) + theme(legend.position = "bottom",legend.text = element_text(size=13),
+  scale_fill_viridis_c(name="", option="plasma", limits = c(0,1),
+                       labels = scales::percent, begin = 0.1, end = 0.9,
+                       breaks = seq(from=0, to=1, by = 0.1)) + 
+  theme(legend.position = "bottom",legend.text = element_text(size=13),
             axis.text = element_text(size=14),
             strip.text = element_text(size=13),
             plot.subtitle = element_text(size=15),
@@ -1525,7 +1653,7 @@ fig4_deaths <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.5,1,1.25),align="v")
 ggsave(paste0("outputs/rerun/Figure4_deaths.png"), fig4_deaths,
-       width = 15, height = 18, scale=1.5, units="cm")
+       width = 18, height = 20, scale=1.5, units="cm")
 
 
 
@@ -1554,12 +1682,14 @@ sudkivu_heatmap_maxdoses_vaccine_deaths <- ggplot(sk_heatmap_data_deaths, aes(x=
 ## Figure 5
 ## line plot of percentage of vaccines averted
 fig5a<-ggplot(data=sensitivity_data_bu, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_bu$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of infections averted", title="Bujumbura")+
   scale_y_continuous(labels = scales::percent)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1575,7 +1705,7 @@ fig5a<-ggplot(data=sensitivity_data_bu, aes(group=scenario_labels))+
   guides(shape = guide_legend(ncol = 3))
 
 ggsave(paste0("outputs/rerun/fig5a.png"), fig5a,
-            width = 10, height = 6)
+            width = 12, height = 6)
 
 # best case scenario for dose numbers 
 fig5b <- best_case_scenario_bu |> 
@@ -1640,7 +1770,7 @@ fig5 <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.5,1,1.25),align="v")
 ggsave(paste0("outputs/rerun/Figure5.png"), fig5,
-       width = 15, height = 18, scale=1.5, units="cm")
+       width = 18, height = 20, scale=1.5, units="cm")
 
 
 bu_heatmap_maxdoses_vaccine <- ggplot(bu_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
@@ -1667,12 +1797,14 @@ bu_heatmap_maxdoses_vaccine <- ggplot(bu_heatmap_data, aes(x=dose_thousands, fil
 
 ## line plot of percentage of vaccines averted
 fig5a_ext <-ggplot(data=sensitivity_data_bu_all, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_percent, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_95_percent, ymax=upper_95_percent, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_bu_all$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of infections averted", title="Bujumbura")+
   scale_y_continuous(labels = scales::percent)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1782,12 +1914,14 @@ bu_heatmap_maxdoses_vaccine_ext <- ggplot(bu_heatmap_data_extended, aes(x=dose_t
 # EQUATEUR - infections averted per dose 
 equateur_averted_per_dose_a <-
   ggplot(data=sensitivity_data_eq_plot, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_eq_plot$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x=NULL, y = NULL, subtitle="Equateur",title="Infections averted per dose (log scale)")+
   scale_shape_manual(name="Priority", values=shape_priority)+
   theme(legend.text = element_text(size=13),
@@ -1806,12 +1940,14 @@ equateur_averted_per_dose_a <-
 
 # SUD KIVU - infections averted per dose 
 sudkivu_averted_per_dose_b<- ggplot(data=sensitivity_data_sk_plot, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_sk_plot$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x=NULL, y=NULL,
        subtitle="Sud Kivu",title=NULL)+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1831,12 +1967,14 @@ sudkivu_averted_per_dose_b<- ggplot(data=sensitivity_data_sk_plot, aes(group=sce
 
 # BURUNDI - infections averted per dose 
 burundi_averted_per_dose_d <- ggplot(data=sensitivity_data_bu_plot_all, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_bu_plot_all$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Bujumbura")+
   scale_shape_manual(name="Priority", values=shape_priority)+
   theme(legend.text = element_text(size=13),
@@ -1854,13 +1992,20 @@ burundi_averted_per_dose_d <- ggplot(data=sensitivity_data_bu_plot_all, aes(grou
 
 
 # BURUNDI - averted per dose (extended)
+sensitivity_data_bu_plot <- sensitivity_data_bu_plot |> mutate(
+  mean_averted_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", mean_averted_per_dose*5, mean_averted_per_dose),
+  lower_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", lower_averted_95_per_dose*5, lower_averted_95_per_dose),
+  upper_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", upper_averted_95_per_dose*5, upper_averted_95_per_dose)
+)
 burundi_averted_per_dose_c<- ggplot(data=sensitivity_data_bu_plot, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_bu_plot$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL, subtitle = "Bujumbura")+
   scale_shape_manual(name="Priority", values=shape_priority)+
   theme(legend.text = element_text(size=13),
@@ -1883,20 +2028,26 @@ fig_averted_per_dose <- cowplot::plot_grid(
   nrow=3,
   rel_heights = c(1.1,1,1.8),align="v")
 ggsave(paste0("outputs/rerun/Figure_cases_averted_per_dose.png"), fig_averted_per_dose,
-       width = 21, height = 20, scale=1, units="cm")
+       width = 27, height = 20, scale=1, units="cm")
 
 
 
 ##### DEATHS AVERTED PER DOSE PLOT 
-
+sensitivity_data_eq_plot_deaths <- sensitivity_data_eq_plot_deaths |> mutate(
+  mean_averted_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", mean_averted_per_dose*5, mean_averted_per_dose),
+  lower_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", lower_averted_95_per_dose*5, lower_averted_95_per_dose),
+  upper_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", upper_averted_95_per_dose*5, upper_averted_95_per_dose)
+)
 equateur_deaths_averted_per_dose_a<-
   ggplot(data=sensitivity_data_eq_plot_deaths, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_eq_plot_deaths$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x=NULL, y=NULL,
        subtitle="Equateur",title="Deaths averted per dose (log scale)")+
   scale_shape_manual(name="Priority", values=shape_priority)+
@@ -1914,13 +2065,20 @@ equateur_deaths_averted_per_dose_a<-
 
 
 # SUD KIVU - deaths averted per dose 
+sensitivity_data_sk_plot_deaths <- sensitivity_data_sk_plot_deaths |> mutate(
+  mean_averted_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", mean_averted_per_dose*5, mean_averted_per_dose),
+  lower_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", lower_averted_95_per_dose*5, lower_averted_95_per_dose),
+  upper_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", upper_averted_95_per_dose*5, upper_averted_95_per_dose)
+)
 sudkivu_deaths_averted_per_dose_b <- ggplot(data=sensitivity_data_sk_plot_deaths, aes(group=scenario_labels))+
-  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
+  geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
+                 group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
   scale_color_manual(name = "Vaccine", values= scenarios_palette_vaccine)+
-  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
+  geom_errorbar(aes(x=dose_character, ymin=lower_averted_95_per_dose, ymax=upper_averted_95_per_dose, colour=scenario_vaccine,
+                    group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)),width = 0, alpha=0.65, linewidth = 0.9, position = position_dodge(width = 0.975))+ 
   theme_minimal()+
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_sk_plot_deaths$dose_character)) - 0.5, 1),
-             linetype = "dashed", color = "grey92")+
+             linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL, title=NULL, subtitle="Sud Kivu")+
   scale_shape_manual(name="Priority", values=shape_priority)+
   theme(legend.text = element_text(size=13),
@@ -1944,7 +2102,7 @@ fig_deaths_averted_per_dose <- cowplot::plot_grid(
   nrow=2,
   rel_heights = c(1.1,1.8),align="v")
 ggsave(paste0("outputs/rerun/Figure_deaths_averted_per_dose.png"), fig_deaths_averted_per_dose,
-       width = 21, height = 16, scale=1, units="cm")
+       width = 27, height = 16, scale=1, units="cm")
 
 
 ## SAVE HEATMAPS
@@ -1984,24 +2142,24 @@ fig_averted <- cowplot::plot_grid(fig3a + theme(legend.position = "none")+
 
 
 fig_averted
-save(fig_averted, file="outputs/fig_averted.RData")
-ggsave("outputs/Figure_averted.png", fig_averted,
+save(fig_averted, file="outputs/rerun/fig_averted.RData")
+ggsave(paste("outputs/rerun/Figure_",assumptions,"_averted.png",sep=""), fig_averted,
        width = 20, height = 15, scale = 1.5,
        units = "cm")
-
-### NEED TO FUN PAPER.FIGURES.R FIRST
-# combine figures 
-load("Z:/Alba/mpox-drc-outputs/src/paper_figures/outputs/fig_fits.RData")
-
-fig_assumption <- cowplot::plot_grid(fig_fits,
-                                  fig_averted,
-                                  nrow=2, labels=c("", ""),
-                                  rel_heights = c(1,3))
-
-
-fig_assumption
-save(fig_assumption, file="outputs/fig_assumption.RData")
-ggsave(paste("outputs/Figure_",assumption,"_assumption.png"), fig_assumption,
-       width = 20, height = 20, scale = 1.5,
-       units = "cm")
-
+# 
+# ### NEED TO RUN PAPER.FIGURES.R FIRST
+# # combine figures
+# load("Z:/Alba/mpox-drc-outputs/src/paper_figures/outputs/fig_fits.RData")
+# 
+# fig_assumption <- cowplot::plot_grid(fig_fits,
+#                                   fig_averted,
+#                                   nrow=2, labels=c("", ""),
+#                                   rel_heights = c(1,3))
+# 
+# 
+# fig_assumption
+# save(fig_assumption, file="outputs/fig_assumption.RData")
+# ggsave(paste("outputs/Figure_",assumptions,"_assumption.png",sep=""), fig_assumption,
+#        width = 20, height = 20, scale = 1.5,
+#        units = "cm")
+# 

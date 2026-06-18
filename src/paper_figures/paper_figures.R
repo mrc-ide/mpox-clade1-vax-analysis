@@ -1,17 +1,18 @@
 
 orderly2::orderly_dependency(
   name = "pmcmc",
-  query = "latest(parameter:region=='sudkivu')",
+  query = "latest(parameter:region=='sudkivu' && parameter:assumptions=='fix_prop_SW')",
   files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
             "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
+
 orderly2::orderly_dependency(
   name = "pmcmc",
-  query = "latest(parameter:region=='equateur')",
+  query = "latest(parameter:region=='equateur' && parameter:assumptions=='fix_prop_SW')",
   files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
             "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
 orderly2::orderly_dependency(
   name = "pmcmc_burundi", 
-  query =  "latest()", 
+  query =  "latest(parameter:assumptions=='fix_prop_SW')", 
   files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
             "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds"))
 
@@ -34,6 +35,7 @@ cols_transmission <- MetBrewer::met.brewer("Hokusai3", 4)
 
 # fitting plots ----------------------------------------------------------------
 both <- "separate"
+assumptions <- "fix_prop_SW"
 
 # data preparation
 # read in data dependencies
@@ -170,6 +172,23 @@ g_zoonotic2 <- daily_zoonotic_summary_tidy |>
         #legend.position.inside = "inside",
         legend.position = "none")#c(0.8,0.8))
 
+# old R0 plots
+# g_R0 <- pars_tidy |> 
+#   filter(name %in% c( "R0_sw_st", "R0_hh")) |> 
+#   mutate(name=case_when(name=="R0_sw_st"~ "R0 sexual",
+#                         name=="R0_hh"~ "R0 household")) |>
+#   ggplot(aes(x = value, fill = region)) +
+#   geom_density(alpha = 0.7, colour = "transparent", position = "identity",
+#                  show.legend = TRUE) +
+#   scale_fill_manual(values = cols_region[c(-3)], 
+#                     labels = c(nms_region, both="Both"), 
+#                     drop = FALSE) +
+#   labs(y="Density", fill=NULL, x=NULL)+
+#   facet_grid(rows = vars(name), scales = "free") +
+#   geom_vline(xintercept = 1, lty = 2) +
+#   theme_bw()+
+#   theme(strip.background = element_blank(),
+#         text=element_text(size=12))
 
 # new R0 plot
 g_R0 <- r0 |> 
@@ -451,6 +470,7 @@ ggsave("outputs/map.png", map,
 # Map
 # Phi
 # fits/cases/infections
+#legend_top <- cowplot::get_plot_component(g_obs_under_cases_b, "guide-box", return_all = TRUE)[[3]]
 legend_top <- cowplot::get_legend(g_obs_under_cases_b)
 fig1_a <- cowplot::plot_grid(map, 
                              g_phi + theme(legend.position = "none"),
@@ -482,6 +502,26 @@ g_transmission + theme(legend.position = "bottom",legend.text = element_text(siz
   labs(fill=NULL, 
        x="Proportion of cumulative infections\nby transmission route")+
   scale_y_discrete(labels=c('DRC\nSud Kivu', 'DRC\nEquateur', 'Burundi\nBujumbura')) -> g_transmission2
+
+
+
+# fig2a_right <- cowplot::plot_grid(g_SW + labs(fill=NULL) + theme(legend.position = "none"),
+#                             g_zoonotic2,
+#                             ncol=1, labels=c("B","C"),
+#                             rel_heights = c(0.7,1))
+# fig2a <- cowplot::plot_grid(g_R0 + 
+#                               theme(legend.text = element_text(size=10),
+#                                     legend.position=c(0.75,0.5)),
+#                             fig2a_right,
+#                             ncol=2, labels=c("A",""))
+# 
+# 
+# fig2b <- cowplot::plot_grid(g_transmission2,
+#                             g_cfr2 + theme(legend.position = c(0.7,0.7)),
+#                             ncol=2,
+#                             labels=c("D", "E"))
+# 
+
 
 
 fig2_left <- cowplot::plot_grid(g_R0 + 
@@ -518,6 +558,25 @@ ggsave("outputs/Figure_2.png", fig2,
        width = 20, height = 16, scale = 1.5,
        units = "cm")
 
-# R0 summaries
+#R0 summaries
 r0_summary <- r0 |> group_by(region, name) |> summarise(mean=mean(value), lower_95=quantile(value, 0.025), upper_95=quantile(value,0.975))
 
+### Supp Figure on Rt trajectories
+
+
+### Supp Figure fits ------------------
+
+#legend_top <- cowplot::get_plot_component(g_obs_under_cases_b, "guide-box", return_all = TRUE)[[3]]
+
+fig_fits <- cowplot::plot_grid(g_obs_under_cases_e + theme(legend.position = "none"), 
+                              g_obs_under_cases_s + theme(legend.position = "none"),
+                              g_obs_under_cases_b + theme(legend.position = "none"),
+                              nrow=1, labels=c("A", "B", "C"),
+                              rel_heights = c(1,1,1))
+
+
+fig_fits
+save(fig_fits, file="outputs/fig_fits.RData")
+ggsave(paste("outputs/Figure",assumption,"_fits.png",sep=""), fig_fits,
+       width = 20, height = 5, scale = 1.5,
+       units = "cm")

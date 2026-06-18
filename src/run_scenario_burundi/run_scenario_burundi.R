@@ -24,15 +24,19 @@ orderly_pars <-
                                uptake_realised = 1,
                                t_ve = 28,
                                vaccine_used = "mix",
-                               vaccines_onset = "end")
-list2env(orderly_pars, environment())
+                               vaccines_onset = "start")
+#list2env(orderly_pars, environment())
 
 
 # load a samples.rds output from
 orderly2::orderly_dependency(name = "pmcmc_burundi",
-                             "latest(parameter:mixing_matrix == this:mixing_matrix && parameter:deterministic == this:deterministic && parameter:assumptions == this:assumptions && parameter:short_run == this:short_run)",
+                             "latest(parameter:mixing_matrix == this:mixing_matrix &&
+                             parameter:deterministic == this:deterministic &&
+                             parameter:assumptions == this:assumptions &&
+                             parameter:short_run == this:short_run)",
                              files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                         "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
+
 
 
 

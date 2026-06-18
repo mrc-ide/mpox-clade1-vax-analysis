@@ -139,7 +139,7 @@ for (i in 1:nrow(scenarios)){
   
   scenario_param <- scenarios %>% filter(scenario_num==scenario_id)
   
-  Total_doses <-output |>
+  Total_doses <- output |>
     filter(Category %in% c("dose1_cumulative", "dose2_cumulative")) |>
     group_by(Particle, TimeStep) |>
     summarise(
@@ -174,8 +174,13 @@ for (i in 1:nrow(scenarios)){
       # Metrics for outcomes averted per dose
       median_averted_per_dose = median(averted/cumulative_dose, na.rm = TRUE),
       mean_averted_per_dose = mean(averted/cumulative_dose, na.rm = TRUE),
-      lower_averted_95_per_dose= quantile(averted/cumulative_dose, 0.025, na.rm = TRUE),
+      lower_averted_95_per_dose = quantile(averted/cumulative_dose, 0.025, na.rm = TRUE),
       upper_averted_95_per_dose = quantile(averted/cumulative_dose, 0.975, na.rm = TRUE),
+      # Metrics for outcomes averted per dose - fractional
+      median_averted_per_dose_frac = median(averted/(cumulative_dose/5), na.rm = TRUE),
+      mean_averted_per_dose_frac = mean(averted/(cumulative_dose/5), na.rm = TRUE),
+      lower_averted_95_per_dose_frac = quantile(averted/(cumulative_dose/5), 0.025, na.rm = TRUE),
+      upper_averted_95_per_dose_frac = quantile(averted/(cumulative_dose/5), 0.975, na.rm = TRUE),
       # Metrics for total dose
       median_cumulative_doses = median(cumulative_dose, na.rm = TRUE),
       mean_cumulative_doses = mean(cumulative_dose, na.rm = TRUE),

@@ -6,7 +6,7 @@ orderly_pars <- orderly2::orderly_parameters(region = 'sudkivu',
                                              fit_by_age = TRUE,
                                              deterministic = FALSE,
                                              fit_KPs = TRUE,
-                                             assumptions = "standard")
+                                             assumptions = "fix_prop_SW")
 list2env(orderly_pars, environment())
 orderly2::orderly_shared_resource("color_palette.R")
 source("color_palette.R")
@@ -14,7 +14,13 @@ source("color_palette.R")
 # inputs
 orderly2::orderly_dependency(
   name = "pmcmc",
-  "latest(parameter:region == this:region && parameter:deterministic == this:deterministic && parameter:fit_by_age == this:fit_by_age && parameter:fit_KPs == this:fit_KPs && parameter:mixing_matrix == this:mixing_matrix && parameter:short_run == this:short_run  && parameter:assumptions == this:assumptions)",
+  "latest(parameter:region == this:region &&
+  parameter:deterministic == this:deterministic &&
+  parameter:fit_by_age == this:fit_by_age &&
+  parameter:fit_KPs == this:fit_KPs &&
+  parameter:mixing_matrix == this:mixing_matrix &&
+  parameter:short_run == this:short_run  &&
+  parameter:assumptions == this:assumptions)",
   files = c("inputs/samples.rds" = "outputs/samples.rds",
             "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
 
@@ -52,7 +58,19 @@ if (region == "both") {
   orderly2::orderly_artefact(description = "Rt plot",
                              files = c("outputs/Rt_equateur.png",
                                        "outputs/Rt_sudkivu.png"))
-} else {
+  
+  # outputs
+  orderly2::orderly_artefact(description = "Traceplot",
+                             files = c("outputs/traceplots.png"))
+  orderly2::orderly_artefact(description = "Pairs plots",
+                             files = c("outputs/pairs_plots.png"))
+  orderly2::orderly_artefact(description = "Rankplots",
+                             files = c("outputs/rankplots.png"))
+  orderly2::orderly_artefact(description = "Convergence diagnostics",
+                             files = c("outputs/convergence_diagnostics.rds"))
+  
+  
+} else if(region=="sudkivu") {
   orderly2::orderly_artefact(description = "Case fit plot",
                              files = "outputs/cases.png")
   
@@ -73,6 +91,50 @@ if (region == "both") {
 
   orderly2::orderly_artefact(description = "Posterior parameters plot",
                              files = "outputs/posteriors.png")
+  
+  # outputs
+  orderly2::orderly_artefact(description = "Traceplot",
+                             files = c("outputs/traceplots_sudkivu.png"))
+  orderly2::orderly_artefact(description = "Pairs plots",
+                             files = c("outputs/pairs_plots_sudkivu.png"))
+  orderly2::orderly_artefact(description = "Rankplots",
+                             files = c("outputs/rankplots_sudkivu.png"))
+  orderly2::orderly_artefact(description = "Convergence diagnostics",
+                             files = c("outputs/convergence_diagnostics.rds"))
+  
+  
+} else {
+  orderly2::orderly_artefact(description = "Case fit plot",
+                             files = "outputs/cases.png")
+  
+  orderly2::orderly_artefact(description = "Death fit plot",
+                             files = "outputs/deaths.png")
+  
+  orderly2::orderly_artefact(description = "SW cases and CFR fit plot",
+                             files = "outputs/sw_cases_and_cfr.png")
+  
+  orderly2::orderly_artefact(description = "Case group fit plot",
+                             files = "outputs/cases_groups.png")
+  
+  orderly2::orderly_artefact(description = "Death group fit plot",
+                             files = "outputs/deaths_groups.png")
+  
+  orderly2::orderly_artefact(description = "Rt plot",
+                             files = "outputs/Rt.png")
+  
+  orderly2::orderly_artefact(description = "Posterior parameters plot",
+                             files = "outputs/posteriors.png")
+  
+  # outputs
+  orderly2::orderly_artefact(description = "Traceplot",
+                             files = c("outputs/traceplots_equateur.png"))
+  orderly2::orderly_artefact(description = "Pairs plots",
+                             files = c("outputs/pairs_plots_equateur.png"))
+  orderly2::orderly_artefact(description = "Rankplots",
+                             files = c("outputs/rankplots_equateur.png"))
+  orderly2::orderly_artefact(description = "Convergence diagnostics",
+                             files = c("outputs/convergence_diagnostics.rds"))
+  
 }
 
 
@@ -91,6 +153,7 @@ library(posterior)
 
 # read in data dependencies
 pmcmc_results <- readRDS("inputs/samples.RDS")
+
 fitting_data <- readRDS("inputs/fitting_data.RDS")
 
 dir.create("outputs", FALSE, TRUE)
@@ -133,16 +196,16 @@ if (region == "both") {
 
 }
 ggsave(plot_posteriors(pmcmc_results, region),
-       filename = "outputs/posteriors.png",
+       filename = paste("outputs/posteriors.png",sep=""),
        width = 10, height = 5)
-ggsave(traceplots(pmcmc_results), 
-       filename = "outputs/traceplots.png",
+ggsave(traceplots(pmcmc_results, region), 
+       filename = paste("outputs/traceplots_",region,".png",sep=""),
        width = 15, height = 9, dpi = 600, bg = "white")
-ggsave(rankplots(pmcmc_results), 
-       filename = "outputs/rankplots.png",
+ggsave(rankplots(pmcmc_results, region), 
+       filename = paste("outputs/rankplots_",region,".png",sep=""),
        width = 15, height = 9, dpi = 600,  bg = "white")
-ggsave(pairs_plot(pmcmc_results),
-       filename = "outputs/pairs_plots.png",
+ggsave(pairs_plot(pmcmc_results, region),
+       filename = paste("outputs/pairs_plots_",region,".png",sep=""),
        width = 10, height = 10, dpi = 600)
 
 

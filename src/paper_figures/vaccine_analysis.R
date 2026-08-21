@@ -4,61 +4,19 @@ orderly2::orderly_parameters(short_run = FALSE,
                              deterministic = FALSE,
                              mixing_matrix = "Zimbabwe",
                              fit_KPs = TRUE, 
-                             assumptions = "standard",
+                             assumptions = "fix_prop_SW",
                              vaccines_onset = "start")
 
-# Load in all dependencies 
-if(assumptions=="fix_prop_SW"){
-orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='sudkivu' && parameter:assumptions == 'fix_prop_SW')",
-  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
-orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == 'fix_prop_SW')",
-  files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
-orderly2::orderly_dependency(name = "run_postprocess",
-                             "latest(parameter:region =='sudkivu' && 
-                                     parameter:deterministic == FALSE && 
-                                     parameter:use_both_fit == FALSE && 
-                                     parameter:fit_by_age == TRUE && 
-                                     parameter:fit_KPs == TRUE &&
-                                     parameter:short_run == FALSE && 
-                                     parameter:vaccines_onset == 'start' &&
-                             parameter:assumptions == 'fix_prop_SW')",
-                             files=c("inputs/runs_postprocess_sudkivu.RDS" = "outputs/runs_postprocess.RDS"))
-orderly2::orderly_dependency(name = "run_postprocess",
-                             "latest(parameter:region =='equateur' && 
-                                     parameter:deterministic == FALSE && 
-                                     parameter:use_both_fit == FALSE && 
-                                     parameter:fit_by_age == TRUE && 
-                                     parameter:fit_KPs == TRUE &&
-                                     parameter:short_run == FALSE && 
-                                     parameter:vaccines_onset == 'start' &&
-                             parameter:assumptions == 'fix_prop_SW')",
-                             files=c("inputs/runs_postprocess_equateur.RDS" = "outputs/runs_postprocess.RDS"))
-orderly2::orderly_dependency(name = "run_postprocess_burundi",
-                             "latest(parameter:deterministic == FALSE && 
-                             parameter:short_run == FALSE && 
-                             parameter:assumptions == 'fix_prop_SW')",
-                             files=c("inputs/runs_postprocess_burundi.RDS" = "outputs/runs_postprocess.RDS"))
 
-orderly2::orderly_dependency(name = "pmcmc_burundi",
-                             "latest(parameter:deterministic == FALSE && parameter:short_run == FALSE &&
-                             parameter:assumptions == 'fix_prop_SW')",
-                             files =  c("inputs/samples.rds" = "outputs/samples.rds",
-                                        "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
-}else{
+# Load in all dependencies 
   orderly2::orderly_dependency(
     name = "pmcmc",
-    query = "latest(parameter:region=='sudkivu')",
+    query = "latest(parameter:region=='sudkivu' && parameter:assumptions == this:assumptions)",
     files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
               "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
   orderly2::orderly_dependency(
     name = "pmcmc",
-    query = "latest(parameter:region=='equateur')",
+    query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == this:assumptions)",
     files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
               "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
   orderly2::orderly_dependency(name = "run_postprocess",
@@ -68,7 +26,8 @@ orderly2::orderly_dependency(name = "pmcmc_burundi",
                                      parameter:fit_by_age == TRUE && 
                                      parameter:fit_KPs == TRUE &&
                                      parameter:short_run == FALSE && 
-                                     parameter:vaccines_onset == 'start')",
+                                     parameter:vaccines_onset == 'start' &&
+                             parameter:assumptions == this:assumptions)",
                                files=c("inputs/runs_postprocess_sudkivu.RDS" = "outputs/runs_postprocess.RDS"))
   orderly2::orderly_dependency(name = "run_postprocess",
                                "latest(parameter:region =='equateur' && 
@@ -77,18 +36,21 @@ orderly2::orderly_dependency(name = "pmcmc_burundi",
                                      parameter:fit_by_age == TRUE && 
                                      parameter:fit_KPs == TRUE &&
                                      parameter:short_run == FALSE && 
-                                     parameter:vaccines_onset == 'start' )",
+                                     parameter:vaccines_onset == 'start' &&
+                             parameter:assumptions == this:assumptions)",
                                files=c("inputs/runs_postprocess_equateur.RDS" = "outputs/runs_postprocess.RDS"))
   orderly2::orderly_dependency(name = "run_postprocess_burundi",
                                "latest(parameter:deterministic == FALSE && 
-                             parameter:short_run == FALSE )",
+                             parameter:short_run == FALSE && 
+                             parameter:assumptions == this:assumptions)",
                                files=c("inputs/runs_postprocess_burundi.RDS" = "outputs/runs_postprocess.RDS"))
   
   orderly2::orderly_dependency(name = "pmcmc_burundi",
-                               "latest(parameter:deterministic == FALSE && parameter:short_run == FALSE)",
+                               "latest(parameter:deterministic == FALSE && parameter:short_run == FALSE &&
+                             parameter:assumptions == this:assumptions)",
                                files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                           "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
-}
+
 # Populations of provinces
 province_pop<-mpoxseir::parameters_demographic(region="sudkivu")$province_pop
 
@@ -114,12 +76,15 @@ library(tidyverse)
 
 ######## Colour Palettes ########
 
+#palette.colors(palette = "Okabe-Ito")
+#"#000000" "#E69F00" "#56B4E9" "#009E73" "#F0E442" "#0072B2" "#D55E00" "#CC79A7" "#999999"
+
 scenarios_palette_vaccine <- c("No vaccination" = "black",
-                               "LC16m8" = "#75884BFF",
-                               "LC16m8 & MVA-BN" = "#5B859EFF",
-                               "One dose MVA-BN"= "#800000",
-                               "Two doses MVA-BN"= "#B38711FF",
-                               "One dose fractional MVA-BN" = "#D48F90FF")
+                               "LC16m8" = "#009E73" ,
+                               "LC16m8 & MVA-BN" = "#0072B2",
+                               "One dose MVA-BN"= "#CC79A7",
+                               "Two doses MVA-BN"= "#E69F00",
+                               "One dose fractional MVA-BN" = "#D55E00")
 #  #AB84A5FF"
 
 # all scenario names A-F
@@ -135,7 +100,7 @@ scenario_names_plots <- c("A: LC16m8",
                           "J: MVA-BN + fractional + kids first",
                           "K: MVA-BN + fractional + SWs first",
                           "L: Two dose MVA-BN"
-                          )
+)
 
 # line type
 linetype_priority <- c("All equal"="solid",
@@ -215,16 +180,16 @@ big_df_equateur <-  readRDS("inputs/runs_postprocess_equateur.RDS") |>
            scenario_new=="MVA-BN + kids first" ~ "<12 years first",
            scenario_new=="MVA-BN + SWs first" ~ "SWs first"
          ),
-        
-         ) %>%
+         
+  ) %>%
   mutate(
     scenario_dose_all = scenario_dose,
     scenario_dose = case_when(
-    scenario_new=="MVA-BN + fractional" ~ scenario_dose/5,
-    scenario_new=="MVA-BN + fractional + kids first" ~ scenario_dose/5,
-    scenario_new=="MVA-BN + fractional + SWs first" ~ scenario_dose/5,
-    .default=scenario_dose
-  )) |>
+      scenario_new=="MVA-BN + fractional" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + kids first" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + SWs first" ~ scenario_dose/5,
+      .default=scenario_dose
+    )) |>
   mutate(scenario_priority = factor(scenario_priority,
                                     levels=c("All equal","<12 years first",
                                              "SWs first")))|>
@@ -235,29 +200,29 @@ big_df_equateur <-  readRDS("inputs/runs_postprocess_equateur.RDS") |>
 ## Account for different dose numbers in fractional dosing for per dose calculations
 big_df_equateur <- mutate(big_df_equateur, 
                           mean_averted_per_dose  = case_when(
-  scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
-  .default=mean_averted_per_dose
-), 
-median_averted_per_dose  = case_when(
-  scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
-  .default=median_averted_per_dose
-), 
-lower_averted_95_per_dose  = case_when(
-  scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
-  .default=lower_averted_95_per_dose
-), 
-upper_averted_95_per_dose  = case_when(
-  scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
-  scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
-  .default=upper_averted_95_per_dose
-)
+                            scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+                            .default=mean_averted_per_dose
+                          ), 
+                          median_averted_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+                            .default=median_averted_per_dose
+                          ), 
+                          lower_averted_95_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+                            .default=lower_averted_95_per_dose
+                          ), 
+                          upper_averted_95_per_dose  = case_when(
+                            scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+                            scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+                            .default=upper_averted_95_per_dose
+                          )
 )
 
 # Plot max dose & middle daily dose total scenario
@@ -356,8 +321,6 @@ eq_lines <- cowplot::plot_grid(
   nrow=2,
   align="v",
   rel_heights = c(1,1.3))
-ggsave(paste0("outputs/rerun/line_plot_equateur.png"), eq_lines,
-       width = 10, height = 10)
 
 sensitivity_data_eq %>% filter(scenario_vaccine=="LC16m8", scenario_priority %in% c("All equal","<12 years first"),scenario_dose==260000) 
 
@@ -393,7 +356,7 @@ sensitivity_data_eq_plot_deaths <- sensitivity_data_eq_deaths %>%
 
 
 ########################### SUD KIVU PLOTS #####################################
-  
+
 # load in post process
 big_df_sudkivu <-  readRDS("inputs/runs_postprocess_sudkivu.RDS") |> 
   mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
@@ -478,30 +441,30 @@ big_df_sudkivu <-  readRDS("inputs/runs_postprocess_sudkivu.RDS") |>
 
 ## Account for different dose numbers in fractional dosing for per dose calculations
 big_df_sudkivu <- mutate(big_df_sudkivu, 
-                          mean_averted_per_dose  = case_when(
-                            scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
-                            .default=mean_averted_per_dose
-                          ), 
-                          median_averted_per_dose  = case_when(
-                            scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
-                            .default=median_averted_per_dose
-                          ), 
-                          lower_averted_95_per_dose  = case_when(
-                            scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
-                            .default=lower_averted_95_per_dose
-                          ), 
-                          upper_averted_95_per_dose  = case_when(
-                            scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
-                            scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
-                            .default=upper_averted_95_per_dose
-                          )
+                         mean_averted_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+                           .default=mean_averted_per_dose
+                         ), 
+                         median_averted_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+                           .default=median_averted_per_dose
+                         ), 
+                         lower_averted_95_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+                           .default=lower_averted_95_per_dose
+                         ), 
+                         upper_averted_95_per_dose  = case_when(
+                           scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+                           scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+                           .default=upper_averted_95_per_dose
+                         )
 )
 # Plot max dose scenario and middle daily doses 
 big_df_plots_sk <- filter(big_df_sudkivu,
@@ -609,9 +572,6 @@ sk_lines <- cowplot::plot_grid(
   nrow=2,
   align="v",
   rel_heights = c(1,1.3))
-ggsave(paste0("outputs/rerun/line_plot_sudkivu.png"), sk_lines,
-       width = 10, height = 10)
-
 
 
 ## equivalent to Fig 4 but for deaths
@@ -737,35 +697,35 @@ big_df_bujumbura <-  readRDS("inputs/runs_postprocess_burundi.RDS") |>
                                     levels=c("All equal","<12 years first",
                                              "SWs first")))%>%
   mutate(scenario_doses_per_day_character=factor(format(scenario_doses_per_day_total, big.mark = ",", scientific = FALSE),
-                                                 levels=c("   25","   50","  100","  250","  500","1,000", "2,000")))
+                                                 levels=c("   25", "   50", "  100", "  250", "  500", "1,000", "2,000")))
 
 
 ## Account for different dose numbers in fractional dosing for per dose calculations
 big_df_bujumbura <- mutate(big_df_bujumbura, 
-                         mean_averted_per_dose  = case_when(
-                           scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
-                           .default=mean_averted_per_dose
-                         ), 
-                         median_averted_per_dose  = case_when(
-                           scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
-                           .default=median_averted_per_dose
-                         ), 
-                         lower_averted_95_per_dose  = case_when(
-                           scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
-                           .default=lower_averted_95_per_dose
-                         ), 
-                         upper_averted_95_per_dose  = case_when(
-                           scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
-                           scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
-                           .default=upper_averted_95_per_dose
-                         )
+                           mean_averted_per_dose  = case_when(
+                             scenario_new=="MVA-BN + fractional" ~ mean_averted_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + kids first" ~ mean_averted_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + SWs first" ~ mean_averted_per_dose_frac,
+                             .default=mean_averted_per_dose
+                           ), 
+                           median_averted_per_dose  = case_when(
+                             scenario_new=="MVA-BN + fractional" ~ median_averted_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + kids first" ~ median_averted_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + SWs first" ~ median_averted_per_dose_frac,
+                             .default=median_averted_per_dose
+                           ), 
+                           lower_averted_95_per_dose  = case_when(
+                             scenario_new=="MVA-BN + fractional" ~ lower_averted_95_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + kids first" ~ lower_averted_95_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + SWs first" ~ lower_averted_95_per_dose_frac,
+                             .default=lower_averted_95_per_dose
+                           ), 
+                           upper_averted_95_per_dose  = case_when(
+                             scenario_new=="MVA-BN + fractional" ~ upper_averted_95_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + kids first" ~ upper_averted_95_per_dose_frac,
+                             scenario_new=="MVA-BN + fractional + SWs first" ~ upper_averted_95_per_dose_frac,
+                             .default=upper_averted_95_per_dose
+                           )
 )
 # Plot max dose scenario
 big_df_plots_bu <- filter(big_df_bujumbura,
@@ -846,8 +806,6 @@ line_plot_bujumbura <- big_df_bu |>
   #guides(shape = guide_legend(ncol = 3)) +
   guides(linetype = guide_legend(ncol = 3,order=1))
 line_plot_bujumbura
-ggsave(paste0("outputs/rerun/line_plot_bujumbura.png"), line_plot_bujumbura,
-       width = 10, height = 5)
 
 
 ################# Burundi EXTENDED DOSES analysis #######################
@@ -892,210 +850,6 @@ sensitivity_data_bu_plot_all <- sensitivity_data_bu_all %>%
     .default = mean_averted_per_dose
   ))
 
-
-
-
-##### Excel tables of averted outcomes ####### -------------------------------------------------
-# Plot max dose & middle daily dose total scenario
-
-# equateur data 
-big_df_data_eq <- filter(big_df_equateur,
-                         scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
-                         Category %in% c("cases_inc_cum"), 
-                         TimeStep==max(big_df_equateur$TimeStep, na.rm = TRUE))
-
-
-big_df_data_eq_deaths <- filter(big_df_equateur,
-                                scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
-                                Category %in% c("deaths_inc_cum"), 
-                                TimeStep==max(big_df_equateur$TimeStep, na.rm = TRUE))
-# sud kicu data
-big_df_data_sk <- filter(big_df_sudkivu, scenario_dose < 3000000,
-                         scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
-                         Category %in% c("cases_inc_cum"), 
-                         TimeStep==max(big_df_sudkivu$TimeStep, na.rm = TRUE))
-
-
-big_df_data_sk_deaths <- filter(big_df_sudkivu, scenario_dose < 3000000,
-                                scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
-                                Category %in% c("deaths_inc_cum"), 
-                                TimeStep==max(big_df_sudkivu$TimeStep, na.rm = TRUE))
-
-# Equateur data 
-data_averted_cases_eq<-big_df_data_eq[,c("scenario_vaccine","scenario_priority",
-                                         "scenario_doses_per_day_character",
-                                         "scenario_dose", "scenario_dose_all",
-                                         "doses_per_day_total",
-                                         "mean_cumulative_doses",
-                                         "lower_95_cumulative_doses",
-                                         "upper_95_cumulative_doses",
-                                         "mean_averted",
-                                         "lower_95_averted","upper_95_averted",
-                                         "mean_percent",
-                                         "lower_95_percent","upper_95_percent")]
-
-data_averted_deaths_eq<-big_df_data_eq_deaths[,c("scenario_vaccine","scenario_priority",
-                                                 "scenario_doses_per_day_character",
-                                                 "scenario_dose", "scenario_dose_all",
-                                                 "doses_per_day_total",
-                                                 "mean_cumulative_doses",
-                                                 "lower_95_cumulative_doses",
-                                                 "upper_95_cumulative_doses",
-                                                 "mean_averted",
-                                                 "lower_95_averted","upper_95_averted",
-                                                 "mean_percent",
-                                                 "lower_95_percent","upper_95_percent")]
-
-
-colnames(data_averted_cases_eq)<-c( "Vaccine","Priority",
-                                    "Strategy doses per day",
-                                    "Full doses available", "Doses available",
-                                    "Doses per day administered",
-                                    "Doses administered mean",
-                                    "Doses administered lower 95% CrI",
-                                    "Doses administered upper 95% CrI",
-                                    "Infections averted mean",
-                                    "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
-                                    "Percentage of infections averted mean",
-                                    "Percentage of infections averted lower 95% CrI",
-                                    "Percentage of infections averted upper 95% CrI"
-)
-
-colnames(data_averted_deaths_eq)<-c("Vaccine","Priority",
-                                    "Strategy doses per day",
-                                    "Full doses available", "Doses available",
-                                    "Doses per day administered",
-                                    "Doses administered mean",
-                                    "Doses administered lower 95% CrI",
-                                    "Doses administered upper 95% CrI" ,
-                                    "Deaths averted mean",
-                                    "Deaths averted lower 95% CrI",
-                                    "Deaths averted upper 95% CrI",
-                                    "Percentage of deaths averted mean",
-                                    "Percentage of deaths averted lower 95% CrI",
-                                    "Percentage of deaths averted upper 95% CrI")
-
-data_averted_eq<-full_join(data_averted_cases_eq,data_averted_deaths_eq, 
-                           by=c("Vaccine","Priority", "Doses available",
-                                "Doses per day administered", "Strategy doses per day",
-                                "Doses administered mean", "Doses administered lower 95% CrI","Doses administered upper 95% CrI"))|>
-  mutate(Province="Equateur")
-
-# Sud Kivu data 
-data_averted_cases_sk<-big_df_data_sk[,c("scenario_vaccine","scenario_priority",
-                                         "scenario_doses_per_day_character",
-                                         "scenario_dose", "scenario_dose_all",
-                                         "doses_per_day_total",
-                                         "mean_cumulative_doses",
-                                         "lower_95_cumulative_doses",
-                                         "upper_95_cumulative_doses",
-                                         "mean_averted",
-                                         "lower_95_averted","upper_95_averted",
-                                         "mean_percent",
-                                         "lower_95_percent","upper_95_percent")]
-
-data_averted_deaths_sk<-big_df_data_sk_deaths[,c("scenario_vaccine",
-                                                 "scenario_priority",
-                                                 "scenario_doses_per_day_character",
-                                                 "scenario_dose", "scenario_dose_all",
-                                                 "doses_per_day_total",
-                                                 "mean_cumulative_doses",
-                                                 "lower_95_cumulative_doses",
-                                                 "upper_95_cumulative_doses",
-                                                 "mean_averted",
-                                                 "lower_95_averted","upper_95_averted",
-                                                 "mean_percent",
-                                                 "lower_95_percent","upper_95_percent")]
-
-
-colnames(data_averted_cases_sk)<-c("Vaccine","Priority",
-                                   "Strategy doses per day",
-                                   "Full doses available", "Doses available",
-                                   "Doses per day administered",
-                                   "Doses administered mean",
-                                   "Doses administered lower 95% CrI",
-                                   "Doses administered upper 95% CrI",
-                                   "Infections averted mean",
-                                   "Infections averted lower 95% CrI",
-                                   "Infections averted upper 95% CrI",
-                                   "Percentage of infections averted mean",
-                                   "Percentage of infections averted lower 95% CrI",
-                                   "Percentage of infections averted upper 95% CrI")
-
-colnames(data_averted_deaths_sk)<-c("Vaccine","Priority",
-                                    "Strategy doses per day",
-                                    "Full doses available", "Doses available",
-                                    "Doses per day administered",
-                                    "Doses administered mean",
-                                    "Doses administered lower 95% CrI",
-                                    "Doses administered upper 95% CrI",
-                                    "Deaths averted mean",
-                                    "Deaths averted lower 95% CrI",
-                                    "Deaths averted upper 95% CrI",
-                                    "Percentage of deaths averted mean",
-                                    "Percentage of deaths averted lower 95% CrI",
-                                    "Percentage of deaths averted upper 95% CrI")
-
-data_averted_sk<-full_join(data_averted_cases_sk, data_averted_deaths_sk, 
-                           by=c("Vaccine","Priority", "Doses administered mean","Doses administered lower 95% CrI","Doses administered upper 95% CrI",
-                                "Doses per day administered", "Strategy doses per day","Doses available"))|>
-  mutate(Province="Sud Kivu", `Doses administered mean`=floor(`Doses administered mean`))
-
-
-### DRC tables 
-data_averted_drc_both <- full_join(data_averted_eq,data_averted_sk)
-data_averted_drc <- data_averted_drc_both[,c(dim(data_averted_drc_both)[2],1:(dim(data_averted_drc_both)[2]-1))]
-data_averted_drc <- data_averted_drc[order(data_averted_drc$`Doses available`),]
-data_averted_drc <- data_averted_drc[order(data_averted_drc$Priority),]
-data_averted_drc <- data_averted_drc[order(data_averted_drc$Vaccine),]
-data_averted_drc <- data_averted_drc[order(data_averted_drc$Province),]
-
-
-# Bujumbura data 
-data_averted_cases_bu<-big_df_cases_bu_all[,c("scenario_vaccine","scenario_priority",
-                                              "scenario_doses_per_day_character",
-                                              "scenario_dose", "scenario_dose_all",
-                                              "doses_per_day_total",
-                                              "mean_cumulative_doses",
-                                              "lower_95_cumulative_doses",
-                                              "upper_95_cumulative_doses",
-                                              "mean_averted",
-                                              "lower_95_averted","upper_95_averted",
-                                              "mean_percent",
-                                              "lower_95_percent","upper_95_percent")]
-
-
-
-colnames(data_averted_cases_bu)<-c("Vaccine","Priority",
-                                   "Strategy doses per day",
-                                   "Full doses available", "Doses available",
-                                   "Doses per day administered",
-                                   "Doses administered mean",
-                                   "Doses administered lower 95% CrI",
-                                   "Doses administered upper 95% CrI",
-                                   "Infections averted mean",
-                                   "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
-                                   "Percentage of infections averted mean",
-                                   "Percentage of infections averted lower 95% CrI",
-                                   "Percentage of infections averted upper 95% CrI"
-)
-### Burundi tables 
-data_averted_cases_bu<-data_averted_cases_bu|>
-  mutate(Province="Bujumbura", `Doses administered mean`=floor(`Doses administered mean`))
-
-data_averted_bu <- data_averted_cases_bu[order(data_averted_cases_bu$`Doses available`),c(dim(data_averted_cases_bu)[2],1:(dim(data_averted_cases_bu)[2]-1))]
-data_averted_bu <- data_averted_bu[order(data_averted_bu$Priority),]
-data_averted_bu <- data_averted_bu[order(data_averted_bu$Vaccine),]
-data_averted_bu <- data_averted_bu[order(data_averted_bu$Province),]
-
-
-
-# Save the data frame as an Excel file
-library(writexl)
-
-write_xlsx(data_averted_drc, "outputs/rerun/DRC_results.xlsx")
-
-write_xlsx(data_averted_bu, "outputs/rerun/Burundi_results.xlsx")
 
 
 
@@ -1266,22 +1020,23 @@ fig3a <- ggplot(data=sensitivity_data_eq)+
 
 fig3a
 
-ggsave(paste0("outputs/rerun/fig3a.png"), fig3a,
-       width = 12, height = 6)
+# ggsave(paste0("outputs/rerun/fig3a.png"), fig3a,
+#        width = 12, height = 6)
 
 
 # best case scenario for each dose number 
 fig3b <- best_case_scenario_eq |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
- # scale_linetype_manual(name="Priority", values=linetype_priority)+
   scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
   geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9, linewidth = 0.9) +
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,12000))+
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs(title = NULL,
        subtitle="Maximum infections averted",
        x = "Available full doses",
@@ -1309,12 +1064,12 @@ equateur_heatmap_maxdoses <- ggplot(eq_heatmap_data, aes(x=dose_thousands, y=sce
     fill = guide_colorbar(
       barwidth = unit(15, "cm"))) +
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-            axis.text = element_text(size=14),
-            strip.text = element_text(size=13),
-            plot.subtitle = element_text(size=15),
-            plot.title = element_text(size=16),
-            axis.title = element_text(size=14.5),
-            legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=13),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
   geom_hline(yintercept =  which(levels(eq_heatmap_data$scenario_doses_per_day_character) == " 5,000"), colour="black", linetype="dashed")
 
 
@@ -1325,9 +1080,7 @@ fig3 <- cowplot::plot_grid(
   fig3b + theme(legend.position = "none"),
   equateur_heatmap_maxdoses,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
-ggsave(paste0("outputs/rerun/Figure3.png"), fig3,
-       width = 18, height = 20, scale=1.5, units="cm")
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
 
 
 equateur_heatmap_maxdoses_vaccine <- ggplot(eq_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
@@ -1340,12 +1093,12 @@ equateur_heatmap_maxdoses_vaccine <- ggplot(eq_heatmap_data, aes(x=dose_thousand
        subtitle="Percentage of infections averted", fill=NULL) +
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-            axis.text = element_text(size=14),
-            strip.text = element_text(size=13),
-            plot.subtitle = element_text(size=15),
-            plot.title = element_text(size=16),
-            axis.title = element_text(size=14.5),
-            legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=13),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
   geom_hline(yintercept =  which(levels(eq_heatmap_data$scenario_doses_per_day_character) == " 5,000"), colour="black", linetype="dashed")
 
 
@@ -1362,7 +1115,6 @@ fig3a_deaths <- ggplot(data=sensitivity_data_eq_deaths, aes(group=scenario_label
                 alpha=0.65, linewidth = 0.9, 
                 position = position_dodge(width = 0.975))+ 
   theme_minimal()+
-
   geom_vline(xintercept = seq(1.5, length(unique(sensitivity_data_eq_deaths$dose_character)) - 0.5, 1),
              linetype = "dashed", color = "grey70")+
   labs(x="Available full doses", y=NULL,subtitle="Percentage of deaths averted", title="Equateur")+
@@ -1383,15 +1135,17 @@ fig3a_deaths <- ggplot(data=sensitivity_data_eq_deaths, aes(group=scenario_label
 # best case scenario per dose number 
 fig3b_deaths <- best_case_scenario_eq_deaths |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
   scale_linetype_manual(name="Priority", values=linetype_priority)+
   scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
-  geom_errorbar(aes(x =  dose_character, y = mean_averted, linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9, linewidth = 0.9) +
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
+  geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,500))+
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs(title = NULL,
        subtitle="Maximum deaths averted",
        x = "Available full doses",
@@ -1436,15 +1190,14 @@ fig3_deaths <- cowplot::plot_grid(
   fig3b_deaths + theme(legend.position = "none"),
   equateur_heatmap_deaths,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
-ggsave(paste0("outputs/rerun/Figure3_Deaths.png"), fig3_deaths,
-       width = 18, height = 20, scale=1.5, units="cm")
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
+
 
 
 
 
 equateur_heatmap_maxdoses_vaccine_deaths <- ggplot(eq_heatmap_data_deaths, aes(x=dose_thousands, fill=scenario_vaccine,
-                                                                        y=scenario_doses_per_day_character, alpha= mean_percent)) + 
+                                                                               y=scenario_doses_per_day_character, alpha= mean_percent)) + 
   geom_tile()+
   theme_minimal()+
   facet_wrap(~scenario_priority)+
@@ -1462,7 +1215,7 @@ equateur_heatmap_maxdoses_vaccine_deaths <- ggplot(eq_heatmap_data_deaths, aes(x
   geom_hline(yintercept =  which(levels(eq_heatmap_data_deaths$scenario_doses_per_day_character) == " 5,000"), colour="black", linetype="dashed")
 
 
-### SUD KIVU
+### SUD KIVU ############################################################
 ## Figure 4
 
 ## line plot of percentage of vaccines averted
@@ -1489,21 +1242,35 @@ fig4a<-ggplot(data=sensitivity_data_sk, aes(group=scenario_labels))+
   guides(color = guide_legend(ncol = 4)) +
   guides(shape = guide_legend(ncol = 3))
 
-ggsave(paste0("outputs/rerun/fig4a.png"), fig4a,
-       width = 12, height = 6)
+# ggsave(paste0("outputs/rerun/fig4a.png"), fig4a,
+#        width = 12, height = 6)
 
 # best case scenario for dose numbers 
 fig4b <- best_case_scenario_sk |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
-#  scale_linetype_manual(name="Priority", values=linetype_priority)+
+  scale_linetype_manual(name="Priority", values=linetype_priority)+
   scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
   geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9) +
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,85000))+
+  # geom_boxplot(
+  #   stat = "identity",
+  #   aes(x = dose_character, fill = scenario_vaccine,
+  #     ymin = lower_95_averted,   # 2.5th percentile
+  #     lower = lower_95_averted,  # 25th percentile (Q1)
+  #     middle = median_averted,   # 50th percentile (Median)
+  #     upper = upper_95_averted,  # 75th percentile (Q3)
+  #   ymax = upper_95_averted    # 97.5th percentile
+  #   ),
+  #   width = 0.5,
+  #   position = position_dodge(0.8)
+  # ) +
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs( title = NULL,
         subtitle="Maximum infections averted",
         x = "Available full doses",
@@ -1532,12 +1299,12 @@ sudkivu_heatmap_maxdoses <-ggplot(sk_heatmap_data, aes(x=dose_thousands, y=scena
     fill = guide_colorbar(
       barwidth = unit(15, "cm"))) +
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-           axis.text = element_text(size=14),
-           strip.text = element_text(size=13),
-           plot.subtitle = element_text(size=15),
-           plot.title = element_text(size=16),
-           axis.title = element_text(size=14.5),
-           legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=13),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
   geom_hline(yintercept =  which(levels(sk_heatmap_data$scenario_doses_per_day_character) == " 5,000"), colour="black", linetype="dashed")
 
 
@@ -1547,13 +1314,11 @@ fig4 <- cowplot::plot_grid(
   fig4b + theme(legend.position = "none"),
   sudkivu_heatmap_maxdoses,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
-ggsave(paste0("outputs/rerun/Figure4.png"), fig4,
-       width = 18, height = 20, scale=1.5, units="cm")
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
 
 
 sudkivu_heatmap_maxdoses_vaccine <- ggplot(sk_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
-                                                                               y=scenario_doses_per_day_character, alpha= mean_percent)) + 
+                                                                y=scenario_doses_per_day_character, alpha= mean_percent)) + 
   geom_tile()+
   theme_minimal()+
   facet_wrap(~scenario_priority)+
@@ -1601,15 +1366,16 @@ fig4a_deaths <-ggplot(data=sensitivity_data_sk_deaths, aes(group=scenario_labels
 # best case scenario for dose number deaths
 fig4b_deaths <- best_case_scenario_sk_deaths |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
- # scale_linetype_manual(name="Priority", values=linetype_priority)+
   scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
-  geom_errorbar(aes(x =  dose_character, y = mean_averted,# linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9) +
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
+  geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,150))+
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs( title = NULL,
         subtitle="Maximum deaths averted",
         x = "Available full doses",
@@ -1635,12 +1401,12 @@ sudkivu_heatmap_deaths <- ggplot(sk_heatmap_data_deaths, aes(x=dose_thousands, y
                        labels = scales::percent, begin = 0.1, end = 0.9,
                        breaks = seq(from=0, to=1, by = 0.1)) + 
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-            axis.text = element_text(size=14),
-            strip.text = element_text(size=13),
-            plot.subtitle = element_text(size=15),
-            plot.title = element_text(size=16),
-            axis.title = element_text(size=14.5),
-            legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90)) +
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=13),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90)) +
   geom_hline(yintercept =  which(levels(sk_heatmap_data_deaths$scenario_doses_per_day_character) == " 5,000"), colour="black", linetype="dashed")
 
 
@@ -1651,14 +1417,11 @@ fig4_deaths <- cowplot::plot_grid(
   fig4b_deaths + theme(legend.position = "none"),
   sudkivu_heatmap_deaths,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
-ggsave(paste0("outputs/rerun/Figure4_deaths.png"), fig4_deaths,
-       width = 18, height = 20, scale=1.5, units="cm")
-
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
 
 
 sudkivu_heatmap_maxdoses_vaccine_deaths <- ggplot(sk_heatmap_data_deaths, aes(x=dose_thousands, fill=scenario_vaccine,
-                                                                y=scenario_doses_per_day_character, alpha= mean_percent)) + 
+                                                                              y=scenario_doses_per_day_character, alpha= mean_percent)) + 
   geom_tile()+
   theme_minimal()+
   facet_wrap(~scenario_priority)+
@@ -1705,20 +1468,22 @@ fig5a<-ggplot(data=sensitivity_data_bu, aes(group=scenario_labels))+
   guides(shape = guide_legend(ncol = 3))
 
 ggsave(paste0("outputs/rerun/fig5a.png"), fig5a,
-            width = 12, height = 6)
+       width = 12, height = 6)
 
 # best case scenario for dose numbers 
 fig5b <- best_case_scenario_bu |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
- # scale_linetype_manual(name="Priority", values=linetype_priority)+
-  scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
   geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9) +
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,8000))+
+  # scale_linetype_manual(name="Priority", values=linetype_priority)+
+  scale_shape_manual(name="Priority", values=shape_priority)+
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs( title = NULL,
         subtitle="Maximum infections averted",
         x = "Available full doses",
@@ -1752,12 +1517,12 @@ burundi_heatmap_maxdoses <- ggplot(bu_heatmap_data|>filter(scenario_dose<=50000)
     fill = guide_colorbar(
       barwidth = unit(15, "cm"))) +
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-            axis.text = element_text(size=14),
-            plot.subtitle = element_text(size=15),
-            plot.title = element_text(size=16),
-            strip.text = element_text(size=13),
-            axis.title = element_text(size=14.5),
-            legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
+        axis.text = element_text(size=14),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        strip.text = element_text(size=13),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) + scale_x_discrete(guide = guide_axis(angle = 90))+
   geom_hline(yintercept =  which(levels(bu_heatmap_data$scenario_doses_per_day_character) == "  500"), colour="black", linetype="dashed")
 
 
@@ -1768,13 +1533,11 @@ fig5 <- cowplot::plot_grid(
   fig5b + theme(legend.position = "none"),
   burundi_heatmap_maxdoses,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
-ggsave(paste0("outputs/rerun/Figure5.png"), fig5,
-       width = 18, height = 20, scale=1.5, units="cm")
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
 
 
 bu_heatmap_maxdoses_vaccine <- ggplot(bu_heatmap_data, aes(x=dose_thousands, fill=scenario_vaccine,
-                                                                y=scenario_doses_per_day_character, alpha= mean_percent)) + 
+                                                           y=scenario_doses_per_day_character, alpha= mean_percent)) + 
   geom_tile()+
   theme_minimal()+
   facet_wrap(~scenario_priority)+
@@ -1819,21 +1582,22 @@ fig5a_ext <-ggplot(data=sensitivity_data_bu_all, aes(group=scenario_labels))+
   guides(color = guide_legend(ncol = 4)) +
   guides(shape = guide_legend(ncol = 3))
 
-ggsave(paste0("outputs/rerun/fig5a_ext.png"), fig5a_ext,
-       width = 12, height = 6)
+# ggsave(paste0("outputs/rerun/fig5a_ext.png"), fig5a_ext,
+#        width = 12, height = 6)
 
 
 # best case scenario for dose numbers
 fig5b_ext <- best_case_scenario_bu_all |> 
   ggplot() +
-  geom_bar(stat = "identity", aes(x =  dose_character, y = mean_averted, 
-                                  fill =  scenario_vaccine)) + 
- # scale_linetype_manual(name="Priority", values=linetype_priority)+
+  geom_point(aes(x =  dose_character, y = mean_averted,
+                 shape=scenario_priority,
+                 colour =  scenario_vaccine), size=2.75, stroke=1.2) +
+  geom_errorbar(aes(x =  dose_character, y = mean_averted, #linetype=scenario_priority,
+                    ymin = lower_95_averted, ymax = upper_95_averted,
+                    colour =  scenario_vaccine), width = 0.5, linewidth = 0.9) +
+  coord_cartesian(ylim=c(0,7000))+
   scale_shape_manual(name="Priority", values=shape_priority)+
-  geom_point(aes(x =  dose_character, y = mean_averted, 
-                 shape=scenario_priority), size=2.75, stroke=1.2) +
-  geom_errorbar(aes(x =  dose_character, y = mean_averted,# linetype=scenario_priority,
-                    ymin = lower_95_averted, ymax = upper_95_averted), width = 0.5, linewidth = 0.9) +
+  scale_colour_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   scale_fill_manual(name="Vaccine", values=scenarios_palette_vaccine)+
   labs( title = NULL,
         subtitle="Maximum infections averted",
@@ -1866,12 +1630,12 @@ burundi_heatmap_maxdoses_extended <- ggplot(bu_heatmap_data_extended, aes(x=dose
     fill = guide_colorbar(
       barwidth = unit(15, "cm"))) +
   theme(legend.position = "bottom",legend.text = element_text(size=13),
-            axis.text = element_text(size=14),
-            strip.text = element_text(size=13),
-            plot.subtitle = element_text(size=15),
-            plot.title = element_text(size=16),
-            axis.title = element_text(size=14.5),
-            legend.key.width = unit(1, "cm")) +
+        axis.text = element_text(size=14),
+        strip.text = element_text(size=13),
+        plot.subtitle = element_text(size=15),
+        plot.title = element_text(size=16),
+        axis.title = element_text(size=14.5),
+        legend.key.width = unit(1, "cm")) +
   scale_x_discrete(guide = guide_axis(angle = 90)) +
   geom_hline(yintercept =  which(levels(bu_heatmap_data_extended$scenario_doses_per_day_character) == "  500"), colour="black", linetype="dashed")
 
@@ -1883,13 +1647,15 @@ fig5_ext <- cowplot::plot_grid(
   fig5b_ext + theme(legend.position = "none"),
   burundi_heatmap_maxdoses_extended,
   nrow=3,
-  rel_heights = c(1.5,1,1.25),align="v")
+  rel_heights = c(1.5,1,1.25),align="v", labels=c("A", "B", "C"))
 ggsave(paste0("outputs/rerun/Figure5_extended.png"), fig5_ext,
        width = 17, height = 18, scale=1.5, units="cm")
+# ggsave(paste0("outputs/rerun/Figure5_extended.pdf"), fig5_ext,
+#        width = 17, height = 18, scale=1.5, units="cm")
 
 
 bu_heatmap_maxdoses_vaccine_ext <- ggplot(bu_heatmap_data_extended, aes(x=dose_thousands, fill=scenario_vaccine,
-                                                           y=scenario_doses_per_day_character, alpha= mean_percent)) + 
+                                                                        y=scenario_doses_per_day_character, alpha= mean_percent)) + 
   geom_tile()+
   theme_minimal()+
   facet_wrap(~scenario_priority)+
@@ -2027,8 +1793,6 @@ fig_averted_per_dose <- cowplot::plot_grid(
   burundi_averted_per_dose_d + theme(legend.position = "bottom"),
   nrow=3,
   rel_heights = c(1.1,1,1.8),align="v")
-ggsave(paste0("outputs/rerun/Figure_cases_averted_per_dose.png"), fig_averted_per_dose,
-       width = 27, height = 20, scale=1, units="cm")
 
 
 
@@ -2101,8 +1865,6 @@ fig_deaths_averted_per_dose <- cowplot::plot_grid(
   sudkivu_deaths_averted_per_dose_b + theme(legend.position = "bottom"),
   nrow=2,
   rel_heights = c(1.1,1.8),align="v")
-ggsave(paste0("outputs/rerun/Figure_deaths_averted_per_dose.png"), fig_deaths_averted_per_dose,
-       width = 27, height = 16, scale=1, units="cm")
 
 
 ## SAVE HEATMAPS
@@ -2113,8 +1875,8 @@ heatmaps_vaccines <- cowplot::plot_grid(
   bu_heatmap_maxdoses_vaccine,
   nrow=3,
   rel_heights = c(1,1,1),align="v")
-ggsave(paste0("outputs/rerun/heatmaps_infections_vaccines.png"), heatmaps_vaccines,
-       width = 20, height = 20, scale=1.5, units="cm")
+# ggsave(paste0("outputs/rerun/heatmaps_infections_vaccines.png"), heatmaps_vaccines,
+#        width = 20, height = 20, scale=1.5, units="cm")
 
 heatmaps <- cowplot::plot_grid(
   equateur_heatmap_maxdoses+labs(title="Equateur"),
@@ -2122,8 +1884,8 @@ heatmaps <- cowplot::plot_grid(
   burundi_heatmap_maxdoses+labs(title="Bujumbura"),
   nrow=3,
   rel_heights = c(1,1,1),align="v")
-ggsave(paste0("outputs/rerun/heatmaps_infections.png"), heatmaps,
-       width = 20, height = 20, scale=1.5, units="cm")
+# ggsave(paste0("outputs/rerun/heatmaps_infections.png"), heatmaps,
+#        width = 20, height = 20, scale=1.5, units="cm")
 
 
 
@@ -2131,35 +1893,382 @@ ggsave(paste0("outputs/rerun/heatmaps_infections.png"), heatmaps,
 fig_averted <- cowplot::plot_grid(fig3a + theme(legend.position = "none")+
                                     labs(title="Percentage of infections averted",
                                          subtitle="Equateur"), 
-                     fig4a + theme(legend.position = "none")+
-                       labs(title=NULL,
-                            subtitle="Sud Kivu"),
-                     fig5a+
-                       labs(title=NULL,
-                            subtitle="Bujumbura"),
-                     nrow=3, labels=c("D", "E", "F"),
-                     rel_heights = c(1.1,1.1,2))
+                                  fig4a + theme(legend.position = "none")+
+                                    labs(title=NULL,
+                                         subtitle="Sud Kivu"),
+                                  fig5a+
+                                    labs(title=NULL,
+                                         subtitle="Bujumbura"),
+                                  nrow=3, labels=c("D", "E", "F"),
+                                  rel_heights = c(1.1,1.1,2))
 
 
 fig_averted
-save(fig_averted, file="outputs/rerun/fig_averted.RData")
-ggsave(paste("outputs/rerun/Figure_",assumptions,"_averted.png",sep=""), fig_averted,
-       width = 20, height = 15, scale = 1.5,
-       units = "cm")
+
+
+
+
+
+##### Excel tables of averted outcomes ####### -------------------------------------------------
+# Plot max dose & middle daily dose total scenario
+
+# equateur data 
+big_df_data_eq <- filter(big_df_equateur,
+                         scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
+                         Category %in% c("cases_inc_cum"), 
+                         TimeStep==max(big_df_equateur$TimeStep, na.rm = TRUE))
+
+
+big_df_data_eq_deaths <- filter(big_df_equateur,
+                                scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
+                                Category %in% c("deaths_inc_cum"), 
+                                TimeStep==max(big_df_equateur$TimeStep, na.rm = TRUE))
+# sud kivu data
+big_df_data_sk <- filter(big_df_sudkivu, scenario_dose < 3000000,
+                         scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
+                         Category %in% c("cases_inc_cum"), 
+                         TimeStep==max(big_df_sudkivu$TimeStep, na.rm = TRUE))
+
+
+big_df_data_sk_deaths <- filter(big_df_sudkivu, scenario_dose < 3000000,
+                                scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)],
+                                Category %in% c("deaths_inc_cum"), 
+                                TimeStep==max(big_df_sudkivu$TimeStep, na.rm = TRUE))
+
+# Equateur data 
+data_averted_cases_eq<-big_df_data_eq[,c("scenario_vaccine","scenario_priority",
+                                         "scenario_doses_per_day_character",
+                                         "scenario_dose", "scenario_dose_all",
+                                         "doses_per_day_total",
+                                         "mean_cumulative_doses",
+                                         "lower_95_cumulative_doses",
+                                         "upper_95_cumulative_doses",
+                                         "mean_averted",
+                                         "lower_95_averted","upper_95_averted",
+                                         "mean_percent",
+                                         "lower_95_percent","upper_95_percent",
+                                         "mean_averted_per_dose",
+                                         "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+data_averted_deaths_eq<-big_df_data_eq_deaths[,c("scenario_vaccine","scenario_priority",
+                                                 "scenario_doses_per_day_character",
+                                                 "scenario_dose", "scenario_dose_all",
+                                                 "doses_per_day_total",
+                                                 "mean_cumulative_doses",
+                                                 "lower_95_cumulative_doses",
+                                                 "upper_95_cumulative_doses",
+                                                 "mean_averted",
+                                                 "lower_95_averted","upper_95_averted",
+                                                 "mean_percent",
+                                                 "lower_95_percent","upper_95_percent",
+                                                 "mean_averted_per_dose",
+                                                 "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+colnames(data_averted_cases_eq)<-c( "Vaccine","Priority",
+                                    "Strategy doses per day",
+                                    "Full doses available", "Doses available",
+                                    "Doses per day administered",
+                                    "Doses administered mean",
+                                    "Doses administered lower 95% CrI",
+                                    "Doses administered upper 95% CrI",
+                                    "Infections averted mean",
+                                    "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
+                                    "Percentage of infections averted mean",
+                                    "Percentage of infections averted lower 95% CrI",
+                                    "Percentage of infections averted upper 95% CrI",
+                                    "Infections averted per dose mean",
+                                    "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI"
+)
+
+colnames(data_averted_deaths_eq)<-c("Vaccine","Priority",
+                                    "Strategy doses per day",
+                                    "Full doses available", "Doses available",
+                                    "Doses per day administered",
+                                    "Doses administered mean",
+                                    "Doses administered lower 95% CrI",
+                                    "Doses administered upper 95% CrI" ,
+                                    "Deaths averted mean",
+                                    "Deaths averted lower 95% CrI",
+                                    "Deaths averted upper 95% CrI",
+                                    "Percentage of deaths averted mean",
+                                    "Percentage of deaths averted lower 95% CrI",
+                                    "Percentage of deaths averted upper 95% CrI",
+                                    "Deaths averted per dose mean",
+                                    "Deaths averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI")
+
+data_averted_eq<-full_join(data_averted_cases_eq,data_averted_deaths_eq, 
+                           by=c("Vaccine","Priority", "Doses available","Full doses available",
+                                "Doses per day administered", "Strategy doses per day",
+                                "Doses administered mean", "Doses administered lower 95% CrI","Doses administered upper 95% CrI"))|>
+  mutate(Province="Equateur")
+
+data_averted_eq <- data_averted_eq[,c(dim(data_averted_eq)[2],1:(dim(data_averted_eq)[2]-1))]
+data_averted_eq <- data_averted_eq[order(data_averted_eq$`Doses available`),]
+data_averted_eq <- data_averted_eq[order(data_averted_eq$Priority),]
+data_averted_eq <- data_averted_eq[order(data_averted_eq$Vaccine),]
+data_averted_eq <- data_averted_eq[order(data_averted_eq$Province),]
+
+
+
+# Sud Kivu data 
+data_averted_cases_sk<-big_df_data_sk[,c("scenario_vaccine","scenario_priority",
+                                         "scenario_doses_per_day_character",
+                                         "scenario_dose", "scenario_dose_all",
+                                         "doses_per_day_total",
+                                         "mean_cumulative_doses",
+                                         "lower_95_cumulative_doses",
+                                         "upper_95_cumulative_doses",
+                                         "mean_averted",
+                                         "lower_95_averted","upper_95_averted",
+                                         "mean_percent",
+                                         "lower_95_percent","upper_95_percent",
+                                         "mean_averted_per_dose",
+                                         "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+data_averted_deaths_sk<-big_df_data_sk_deaths[,c("scenario_vaccine",
+                                                 "scenario_priority",
+                                                 "scenario_doses_per_day_character",
+                                                 "scenario_dose", "scenario_dose_all",
+                                                 "doses_per_day_total",
+                                                 "mean_cumulative_doses",
+                                                 "lower_95_cumulative_doses",
+                                                 "upper_95_cumulative_doses",
+                                                 "mean_averted",
+                                                 "lower_95_averted","upper_95_averted",
+                                                 "mean_percent",
+                                                 "lower_95_percent","upper_95_percent",
+                                                 "mean_averted_per_dose",
+                                                 "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+colnames(data_averted_cases_sk)<-c("Vaccine","Priority",
+                                   "Strategy doses per day",
+                                   "Full doses available", "Doses available",
+                                   "Doses per day administered",
+                                   "Doses administered mean",
+                                   "Doses administered lower 95% CrI",
+                                   "Doses administered upper 95% CrI",
+                                   "Infections averted mean",
+                                   "Infections averted lower 95% CrI",
+                                   "Infections averted upper 95% CrI",
+                                   "Percentage of infections averted mean",
+                                   "Percentage of infections averted lower 95% CrI",
+                                   "Percentage of infections averted upper 95% CrI",
+                                   "Infections averted per dose mean",
+                                   "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI")
+
+colnames(data_averted_deaths_sk)<-c("Vaccine","Priority",
+                                    "Strategy doses per day",
+                                    "Full doses available", "Doses available",
+                                    "Doses per day administered",
+                                    "Doses administered mean",
+                                    "Doses administered lower 95% CrI",
+                                    "Doses administered upper 95% CrI",
+                                    "Deaths averted mean",
+                                    "Deaths averted lower 95% CrI",
+                                    "Deaths averted upper 95% CrI",
+                                    "Percentage of deaths averted mean",
+                                    "Percentage of deaths averted lower 95% CrI",
+                                    "Percentage of deaths averted upper 95% CrI",
+                                    "Deaths averted per dose mean",
+                                    "Deaths averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI")
+
+data_averted_sk<-full_join(data_averted_cases_sk, data_averted_deaths_sk, 
+                           by=c("Vaccine","Priority", "Doses administered mean","Doses administered lower 95% CrI","Doses administered upper 95% CrI",
+                                "Doses per day administered", "Strategy doses per day","Full doses available","Doses available"))|>
+  mutate(Province="Sud Kivu", `Doses administered mean`=floor(`Doses administered mean`))
+
+data_averted_sk <- data_averted_sk[,c(dim(data_averted_sk)[2],1:(dim(data_averted_sk)[2]-1))]
+data_averted_sk <- data_averted_sk[order(data_averted_sk$`Doses available`),]
+data_averted_sk <- data_averted_sk[order(data_averted_sk$Priority),]
+data_averted_sk <- data_averted_sk[order(data_averted_sk$Vaccine),]
+data_averted_sk <- data_averted_sk[order(data_averted_sk$Province),]
+
+### DRC tables 
+#data_averted_drc_both <- full_join(data_averted_eq,data_averted_sk)
+# data_averted_drc <- data_averted_drc_both[,c(dim(data_averted_drc_both)[2],1:(dim(data_averted_drc_both)[2]-1))]
+# data_averted_drc <- data_averted_drc[order(data_averted_drc$`Doses available`),]
+# data_averted_drc <- data_averted_drc[order(data_averted_drc$Priority),]
+# data_averted_drc <- data_averted_drc[order(data_averted_drc$Vaccine),]
+# data_averted_drc <- data_averted_drc[order(data_averted_drc$Province),]
+
+
+# Bujumbura data 
+data_averted_cases_bu<-big_df_cases_bu_all[,c("scenario_vaccine","scenario_priority",
+                                              "scenario_doses_per_day_character",
+                                              "scenario_dose", "scenario_dose_all",
+                                              "doses_per_day_total",
+                                              "mean_cumulative_doses",
+                                              "lower_95_cumulative_doses",
+                                              "upper_95_cumulative_doses",
+                                              "mean_averted",
+                                              "lower_95_averted","upper_95_averted",
+                                              "mean_percent",
+                                              "lower_95_percent","upper_95_percent",
+                                              "mean_averted_per_dose",
+                                              "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+
+colnames(data_averted_cases_bu)<-c("Vaccine","Priority",
+                                   "Strategy doses per day",
+                                   "Full doses available", "Doses available",
+                                   "Doses per day administered",
+                                   "Doses administered mean",
+                                   "Doses administered lower 95% CrI",
+                                   "Doses administered upper 95% CrI",
+                                   "Infections averted mean",
+                                   "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
+                                   "Percentage of infections averted mean",
+                                   "Percentage of infections averted lower 95% CrI",
+                                   "Percentage of infections averted upper 95% CrI",
+                                   "Infections averted per dose mean",
+                                   "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI"
+)
+### Burundi tables 
+data_averted_cases_bu<-data_averted_cases_bu|>
+  mutate(Province="Bujumbura", `Doses administered mean`=floor(`Doses administered mean`))
+
+data_averted_bu <- data_averted_cases_bu[order(data_averted_cases_bu$`Doses available`),c(dim(data_averted_cases_bu)[2],1:(dim(data_averted_cases_bu)[2]-1))]
+data_averted_bu <- data_averted_bu[order(data_averted_bu$Priority),]
+data_averted_bu <- data_averted_bu[order(data_averted_bu$Vaccine),]
+data_averted_bu <- data_averted_bu[order(data_averted_bu$Province),]
+
+
+
+# Save the data frame as an Excel file
+library(writexl)
+
+write_xlsx(data_averted_eq, "outputs/rerun/Equateur_results.xlsx")
+write_xlsx(data_averted_sk, "outputs/rerun/SudKiv_results.xlsx")
+write_xlsx(data_averted_bu, "outputs/rerun/Burundi_results.xlsx")
+
+
+# # if doing for all figure 
+# # Word to search for in column names
+# word_to_remove <- "permissions"
 # 
-# ### NEED TO RUN PAPER.FIGURES.R FIRST
-# # combine figures
-# load("Z:/Alba/mpox-drc-outputs/src/paper_figures/outputs/fig_fits.RData")
-# 
-# fig_assumption <- cowplot::plot_grid(fig_fits,
-#                                   fig_averted,
-#                                   nrow=2, labels=c("", ""),
-#                                   rel_heights = c(1,3))
-# 
-# 
-# fig_assumption
-# save(fig_assumption, file="outputs/fig_assumption.RData")
-# ggsave(paste("outputs/Figure_",assumptions,"_assumption.png",sep=""), fig_assumption,
-#        width = 20, height = 20, scale = 1.5,
-#        units = "cm")
-# 
+# # Remove columns containing the word (case-insensitive)
+# df_clean <- df[, !grepl(word_to_remove, names(df), ignore.case = TRUE)]
+
+
+if( assumptions == "fix_prop_SW"){
+  # Figure excel sheet
+  source_data_list<- list(
+    `Equateur results (fixed SW proportion)` = data_averted_eq,
+    `Sud Kivu results (fixed SW proportion)` = data_averted_sk,
+    `Burundi results (fixed SW proportion)` = data_averted_bu,
+    `Figure S20B` = best_case_scenario_eq_deaths,
+    `Figure S21B` = best_case_scenario_sk_deaths,
+    `Figure S28B` = best_case_scenario_bu_all
+  )
+  
+  write_xlsx(source_data_list, paste("outputs/rerun/Source-Data-",assumptions,".xlsx", sep=""))
+  
+  ##### Supplementary Information plots
+  ## figure cases averted 
+  save(fig_averted, file="outputs/fig_averted.RData")
+  ggsave(paste("outputs/Figure_",assumptions,"_averted.png",sep=""), fig_averted,
+         width = 20, height = 15, scale = 1.5,
+         units = "cm")
+  # ggsave(paste("outputs/rerun/Figure_",assumptions,"_averted.pdf",sep=""), fig_averted,
+  #        width = 20, height = 15, scale = 1.5,
+  #        units = "cm")
+  
+  ### NEED TO RUN PAPER.FIGURES.R FIRST
+  # combine figures
+  load("Z:/Alba/mpox-drc-outputs/src/paper_figures/outputs/fig_fits.RData")
+  
+  fig_assumption <- cowplot::plot_grid(fig_fits,
+                                       fig_averted,
+                                       nrow=2, labels=c("", ""),
+                                       rel_heights = c(1,3))
+  
+  
+  fig_assumption
+  save(fig_assumption, file="outputs/fig_assumption.RData")
+  ggsave(paste("outputs/rerun/Figure_",assumptions,"_assumption.png",sep=""), fig_assumption,
+         width = 20, height = 20, scale = 1.5,
+         units = "cm")
+  
+  
+}else{
+  # Figure excel sheet
+  source_data_list<- list(
+    `Equateur results` = data_averted_eq,
+    `Sud Kivu results` = data_averted_sk,
+    `Burundi results` = data_averted_bu,
+    `Figure 3B` = best_case_scenario_eq,
+    `Figure 4B` = best_case_scenario_sk,
+    `Figure 5B` = best_case_scenario_bu
+  )
+  
+  write_xlsx(source_data_list, "outputs/rerun/Source-Data.xlsx")
+  
+  
+  
+  ##### Supplementry info plots 
+  ### LINE PLOTS 
+  ggsave(paste0("outputs/rerun/line_plot_equateur.png"), eq_lines,
+         width = 10, height = 10)
+  # ggsave(paste0("outputs/rerun/line_plot_equateur.pdf"), eq_lines,
+  #        width = 10, height = 10)
+  ggsave(paste0("outputs/rerun/line_plot_sudkivu.png"), sk_lines,
+         width = 10, height = 10)
+  # ggsave(paste0("outputs/rerun/line_plot_sudkivu.pdf"), sk_lines,
+  #        width = 10, height = 10)
+  ggsave(paste0("outputs/rerun/line_plot_bujumbura.png"), line_plot_bujumbura,
+         width = 10, height = 5)
+  # ggsave(paste0("outputs/rerun/line_plot_bujumbura.pdf"), line_plot_bujumbura,
+  #        width = 10, height = 5)
+  
+  ### DEATH PLOTS 
+  ## equateur
+  ggsave(paste0("outputs/rerun/Figure3_Deaths.png"), fig3_deaths,
+         width = 18, height = 20, scale=1.5, units="cm")
+  # ggsave(paste0("outputs/rerun/Figure3_Deaths.pdf"), fig3_deaths,
+  #        width = 18, height = 20, scale=1.5, units="cm")
+  ## sud kivu
+  ggsave(paste0("outputs/rerun/Figure4_deaths.png"), fig4_deaths,
+         width = 18, height = 20, scale=1.5, units="cm")
+  # ggsave(paste0("outputs/rerun/Figure4_deaths.pdf"), fig4_deaths,
+  #        width = 18, height = 20, scale=1.5, units="cm")
+  #### EXTENDED DOSE ANALYSIS 
+  ggsave(paste0("outputs/rerun/Figure5_extended.png"), fig5_ext,
+         width = 17, height = 18, scale=1.5, units="cm")
+  # ggsave(paste0("outputs/rerun/Figure5_extended.pdf"), fig5_ext,
+  #        width = 17, height = 18, scale=1.5, units="cm")
+  ####  AVERTED PER DOSE 
+  ## cases
+  ggsave(paste0("outputs/rerun/Figure_cases_averted_per_dose.png"), fig_averted_per_dose,
+         width = 27, height = 20, scale=1, units="cm")
+  # ggsave(paste0("outputs/rerun/Figure_cases_averted_per_dose.pdf"), fig_averted_per_dose,
+  #        width = 27, height = 20, scale=1, units="cm")
+  ## deaths
+  ggsave(paste0("outputs/rerun/Figure_deaths_averted_per_dose.png"), fig_deaths_averted_per_dose,
+         width = 27, height = 16, scale=1, units="cm")
+  # ggsave(paste0("outputs/rerun/Figure_deaths_averted_per_dose.pdf"), fig_deaths_averted_per_dose,
+  #        width = 27, height = 16, scale=1, units="cm")
+  
+  
+  #### MAIN plots 
+  ## Figure 3 
+  ggsave(paste0("outputs/rerun/Figure3.png"), fig3,
+         width = 18, height = 20, scale=1.5, units="cm")
+  ggsave(paste0("outputs/rerun/Figure3.pdf"), fig3,
+         width = 18, height = 20, scale=1.5, units="cm")
+  ## Figure 4
+  ggsave(paste0("outputs/rerun/Figure4.png"), fig4,
+         width = 18, height = 20, scale=1.5, units="cm")
+  ggsave(paste0("outputs/rerun/Figure4.pdf"), fig4,
+         width = 18, height = 20, scale=1.5, units="cm")
+  ## Figure 5
+  ggsave(paste0("outputs/rerun/Figure5.png"), fig5,
+         width = 18, height = 20, scale=1.5, units="cm")
+  ggsave(paste0("outputs/rerun/Figure5.pdf"), fig5,
+         width = 18, height = 20, scale=1.5, units="cm")
+  
+}
+
+

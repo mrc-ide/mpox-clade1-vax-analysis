@@ -605,7 +605,6 @@ if( assumptions == "fix_prop_SW"){
     labs(fill=NULL, 
          x="Proportion of cumulative infections\nby transmission route")+
     scale_y_discrete(labels=c('DRC\nSud Kivu', 'DRC\nEquateur', 'Burundi\nBujumbura')) -> g_transmission2
-
   
   
     # fig2_left <- cowplot::plot_grid(g_R0 + 
@@ -643,6 +642,7 @@ if( assumptions == "fix_prop_SW"){
   # ggsave("outputs/rerun/Figure_2_sw.pdf", fig2,
   #        width = 20, height = 16, scale = 1.5,
   #        units = "cm")
+
   
   fig2_left <- cowplot::plot_grid(g_R0 + 
                                     theme(legend.text = element_text(size=10),

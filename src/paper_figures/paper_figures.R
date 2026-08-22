@@ -607,70 +607,34 @@ if( assumptions == "fix_prop_SW"){
     scale_y_discrete(labels=c('DRC\nSud Kivu', 'DRC\nEquateur', 'Burundi\nBujumbura')) -> g_transmission2
   
   
-    # fig2_left <- cowplot::plot_grid(g_R0 + 
-  #                                   theme(legend.text = element_text(size=10),
-  #                                         legend.position=c(0.75,0.5)),
-  #                                 g_SW + labs(fill=NULL) + theme(legend.position = "none"),
-  #                                 
-  #                                 ncol=1, labels=c("A","B"),
-  #                                 rel_heights = c(0.9,0.325), align="v")
-  # 
-  # fig2_rightb <- cowplot::plot_grid(
-  #   g_zoonotic2,
-  #   g_cfr2 + theme(legend.text = element_text(size=10),
-  #                  legend.position = c(0.7,0.7)),
-  #   ncol=1,
-  #   labels=c("D","E"), align="v",
-  #   rel_heights = c(0.9,0.9))
-  # 
-  # fig2_right <- cowplot::plot_grid(g_transmission2,
-  #                                  fig2_rightb,
-  #                                  ncol=1,
-  #                                  labels=c("C",""),
-  #                                  rel_heights = c(0.9,1.8))
-  # 
-  # 
-  # fig2 <- cowplot::plot_grid(fig2_left,
-  #                            fig2_right,
-  #                            rel_heights = c(1,0.9),
-  #                            ncol=2,
-  #                            labels=NULL, align="v") 
-  # fig2
-  # ggsave("outputs/rerun/Figure_2_sw.png", fig2,
-  #        width = 20, height = 16, scale = 1.5,
-  #        units = "cm")
-  # ggsave("outputs/rerun/Figure_2_sw.pdf", fig2,
-  #        width = 20, height = 16, scale = 1.5,
-  #        units = "cm")
-
-  
   fig2_left <- cowplot::plot_grid(g_R0 + 
                                     theme(legend.text = element_text(size=10),
-                                          legend.position=c(0.75,0.5)),
+                                          legend.position=c(0.725,0.5)),
                                   g_transmission2,
                                   #  g_SW + labs(fill=NULL) + theme(legend.position = "none"),
                                   ncol=1, labels=c("A","B"),
-                                  rel_heights = c(0.6,0.4), align="v")
+                                  rel_heights = c(1,0.6), align="v", axis="lr")
   fig2_right <- cowplot::plot_grid(g_zoonotic2,
                                    g_cfr2 + theme(legend.text = element_text(size=10),
-                                                  legend.position = c(0.7,0.7)),
+                                                  legend.position = c(0.75,0.5)),
                                    ncol=1,
                                    labels=c("C","D"),
-                                   rel_heights = c(1,1))
+                                   rel_heights = c(1,1), align="v")
   
   
   fig2 <- cowplot::plot_grid(fig2_left,
                              fig2_right,
-                             rel_heights = c(1,0.9),
+                             rel_heights = c(1,1),
                              ncol=2,
                              labels=NULL, align="v") 
   fig2
   ggsave("outputs/rerun/Figure_2.png", fig2,
-         width = 20, height = 16, scale = 1.5,
+         width = 22, height = 18, scale = 1.1,
          units = "cm")
   ggsave("outputs/rerun/Figure_2.pdf", fig2,
-         width = 20, height = 16, scale = 1.5,
+         width = 22, height = 18, scale = 1.1,
          units = "cm")
+  
   #### Supplementry information figure 
   #S19
   ggsave(paste0("outputs/rerun/rt_", both,".png"), g_Rt,

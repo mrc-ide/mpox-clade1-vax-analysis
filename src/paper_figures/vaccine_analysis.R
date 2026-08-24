@@ -1758,11 +1758,6 @@ burundi_averted_per_dose_d <- ggplot(data=sensitivity_data_bu_plot_all, aes(grou
 
 
 # BURUNDI - averted per dose (extended)
-sensitivity_data_bu_plot <- sensitivity_data_bu_plot |> mutate(
-  mean_averted_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", mean_averted_per_dose*5, mean_averted_per_dose),
-  lower_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", lower_averted_95_per_dose*5, lower_averted_95_per_dose),
-  upper_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", upper_averted_95_per_dose*5, upper_averted_95_per_dose)
-)
 burundi_averted_per_dose_c<- ggplot(data=sensitivity_data_bu_plot, aes(group=scenario_labels))+
   geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
                  group = interaction(scenario_priority, scenario_vaccine, lex.order = TRUE)), size=2.75, stroke=1.2, alpha=0.65, position = position_dodge(width = 0.975))+
@@ -1797,11 +1792,6 @@ fig_averted_per_dose <- cowplot::plot_grid(
 
 
 ##### DEATHS AVERTED PER DOSE PLOT 
-sensitivity_data_eq_plot_deaths <- sensitivity_data_eq_plot_deaths |> mutate(
-  mean_averted_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", mean_averted_per_dose*5, mean_averted_per_dose),
-  lower_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", lower_averted_95_per_dose*5, lower_averted_95_per_dose),
-  upper_averted_95_per_dose = ifelse(scenario_vaccine=="One dose fractional MVA-BN", upper_averted_95_per_dose*5, upper_averted_95_per_dose)
-)
 equateur_deaths_averted_per_dose_a<-
   ggplot(data=sensitivity_data_eq_plot_deaths, aes(group=scenario_labels))+
   geom_point(aes(x=dose_character, y=mean_averted_per_dose, colour=scenario_vaccine, shape=scenario_priority,
@@ -2145,12 +2135,204 @@ write_xlsx(data_averted_sk, "outputs/rerun/SudKiv_results.xlsx")
 write_xlsx(data_averted_bu, "outputs/rerun/Burundi_results.xlsx")
 
 
-# # if doing for all figure 
-# # Word to search for in column names
-# word_to_remove <- "permissions"
-# 
-# # Remove columns containing the word (case-insensitive)
-# df_clean <- df[, !grepl(word_to_remove, names(df), ignore.case = TRUE)]
+## Tidy best case scenatrio data 
+# EQUATEUR data 
+best_case_scenario_eq<-best_case_scenario_eq[,c("scenario_vaccine","scenario_priority",
+                                                "scenario_doses_per_day_character",
+                                                "scenario_dose", "scenario_dose_all",
+                                                "doses_per_day_total",
+                                                "mean_cumulative_doses",
+                                                "lower_95_cumulative_doses",
+                                                "upper_95_cumulative_doses",
+                                                "mean_averted",
+                                                "lower_95_averted","upper_95_averted",
+                                                "mean_percent",
+                                                "lower_95_percent","upper_95_percent",
+                                                "mean_averted_per_dose",
+                                                "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+best_case_scenario_eq_deaths<-best_case_scenario_eq_deaths[,c("scenario_vaccine",
+                                                              "scenario_priority",
+                                                              "scenario_doses_per_day_character",
+                                                              "scenario_dose", "scenario_dose_all",
+                                                              "doses_per_day_total",
+                                                              "mean_cumulative_doses",
+                                                              "lower_95_cumulative_doses",
+                                                              "upper_95_cumulative_doses",
+                                                              "mean_averted",
+                                                              "lower_95_averted","upper_95_averted",
+                                                              "mean_percent",
+                                                              "lower_95_percent","upper_95_percent",
+                                                              "mean_averted_per_dose",
+                                                              "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+colnames(best_case_scenario_eq)<-c("Vaccine","Priority",
+                                   "Strategy doses per day",
+                                   "Full doses available", "Doses available",
+                                   "Doses per day administered",
+                                   "Doses administered mean",
+                                   "Doses administered lower 95% CrI",
+                                   "Doses administered upper 95% CrI",
+                                   "Infections averted mean",
+                                   "Infections averted lower 95% CrI",
+                                   "Infections averted upper 95% CrI",
+                                   "Percentage of infections averted mean",
+                                   "Percentage of infections averted lower 95% CrI",
+                                   "Percentage of infections averted upper 95% CrI",
+                                   "Infections averted per dose mean",
+                                   "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI")
+
+colnames(best_case_scenario_eq_deaths)<-c("Vaccine","Priority",
+                                          "Strategy doses per day",
+                                          "Full doses available", "Doses available",
+                                          "Doses per day administered",
+                                          "Doses administered mean",
+                                          "Doses administered lower 95% CrI",
+                                          "Doses administered upper 95% CrI",
+                                          "Deaths averted mean",
+                                          "Deaths averted lower 95% CrI",
+                                          "Deaths averted upper 95% CrI",
+                                          "Percentage of deaths averted mean",
+                                          "Percentage of deaths averted lower 95% CrI",
+                                          "Percentage of deaths averted upper 95% CrI",
+                                          "Deaths averted per dose mean",
+                                          "Deaths averted per dose lower 95% CrI","Deaths averted per dose upper 95% CrI")
+
+
+# Sud Kivu data 
+best_case_scenario_sk<-best_case_scenario_sk[,c("scenario_vaccine","scenario_priority",
+                                                "scenario_doses_per_day_character",
+                                                "scenario_dose", "scenario_dose_all",
+                                                "doses_per_day_total",
+                                                "mean_cumulative_doses",
+                                                "lower_95_cumulative_doses",
+                                                "upper_95_cumulative_doses",
+                                                "mean_averted",
+                                                "lower_95_averted","upper_95_averted",
+                                                "mean_percent",
+                                                "lower_95_percent","upper_95_percent",
+                                                "mean_averted_per_dose",
+                                                "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+best_case_scenario_sk_deaths<-best_case_scenario_sk_deaths[,c("scenario_vaccine",
+                                                              "scenario_priority",
+                                                              "scenario_doses_per_day_character",
+                                                              "scenario_dose", "scenario_dose_all",
+                                                              "doses_per_day_total",
+                                                              "mean_cumulative_doses",
+                                                              "lower_95_cumulative_doses",
+                                                              "upper_95_cumulative_doses",
+                                                              "mean_averted",
+                                                              "lower_95_averted","upper_95_averted",
+                                                              "mean_percent",
+                                                              "lower_95_percent","upper_95_percent",
+                                                              "mean_averted_per_dose",
+                                                              "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+colnames(best_case_scenario_sk)<-c("Vaccine","Priority",
+                                   "Strategy doses per day",
+                                   "Full doses available", "Doses available",
+                                   "Doses per day administered",
+                                   "Doses administered mean",
+                                   "Doses administered lower 95% CrI",
+                                   "Doses administered upper 95% CrI",
+                                   "Infections averted mean",
+                                   "Infections averted lower 95% CrI",
+                                   "Infections averted upper 95% CrI",
+                                   "Percentage of infections averted mean",
+                                   "Percentage of infections averted lower 95% CrI",
+                                   "Percentage of infections averted upper 95% CrI",
+                                   "Infections averted per dose mean",
+                                   "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI")
+
+colnames(best_case_scenario_sk_deaths)<-c("Vaccine","Priority",
+                                          "Strategy doses per day",
+                                          "Full doses available", "Doses available",
+                                          "Doses per day administered",
+                                          "Doses administered mean",
+                                          "Doses administered lower 95% CrI",
+                                          "Doses administered upper 95% CrI",
+                                          "Deaths averted mean",
+                                          "Deaths averted lower 95% CrI",
+                                          "Deaths averted upper 95% CrI",
+                                          "Percentage of deaths averted mean",
+                                          "Percentage of deaths averted lower 95% CrI",
+                                          "Percentage of deaths averted upper 95% CrI",
+                                          "Deaths averted per dose mean",
+                                          "Deaths averted per dose lower 95% CrI","Deaths averted per dose upper 95% CrI")
+
+
+### BURUNDI
+best_case_scenario_bu<-best_case_scenario_bu[,c("scenario_vaccine","scenario_priority",
+                                                "scenario_doses_per_day_character",
+                                                "scenario_dose", "scenario_dose_all",
+                                                "doses_per_day_total",
+                                                "mean_cumulative_doses",
+                                                "lower_95_cumulative_doses",
+                                                "upper_95_cumulative_doses",
+                                                "mean_averted",
+                                                "lower_95_averted","upper_95_averted",
+                                                "mean_percent",
+                                                "lower_95_percent","upper_95_percent",
+                                                "mean_averted_per_dose",
+                                                "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+
+colnames(best_case_scenario_bu)<-c("Vaccine","Priority",
+                                   "Strategy doses per day",
+                                   "Full doses available", "Doses available",
+                                   "Doses per day administered",
+                                   "Doses administered mean",
+                                   "Doses administered lower 95% CrI",
+                                   "Doses administered upper 95% CrI",
+                                   "Infections averted mean",
+                                   "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
+                                   "Percentage of infections averted mean",
+                                   "Percentage of infections averted lower 95% CrI",
+                                   "Percentage of infections averted upper 95% CrI",
+                                   "Infections averted per dose mean",
+                                   "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI"
+)
+
+best_case_scenario_bu_all<-best_case_scenario_bu_all[,c("scenario_vaccine","scenario_priority",
+                                                        "scenario_doses_per_day_character",
+                                                        "scenario_dose", "scenario_dose_all",
+                                                        "doses_per_day_total",
+                                                        "mean_cumulative_doses",
+                                                        "lower_95_cumulative_doses",
+                                                        "upper_95_cumulative_doses",
+                                                        "mean_averted",
+                                                        "lower_95_averted","upper_95_averted",
+                                                        "mean_percent",
+                                                        "lower_95_percent","upper_95_percent",
+                                                        "mean_averted_per_dose",
+                                                        "lower_averted_95_per_dose","upper_averted_95_per_dose")]
+
+
+
+colnames(best_case_scenario_bu_all)<-c("Vaccine","Priority",
+                                       "Strategy doses per day",
+                                       "Full doses available", "Doses available",
+                                       "Doses per day administered",
+                                       "Doses administered mean",
+                                       "Doses administered lower 95% CrI",
+                                       "Doses administered upper 95% CrI",
+                                       "Infections averted mean",
+                                       "Infections averted lower 95% CrI","Infections averted upper 95% CrI",
+                                       "Percentage of infections averted mean",
+                                       "Percentage of infections averted lower 95% CrI",
+                                       "Percentage of infections averted upper 95% CrI",
+                                       "Infections averted per dose mean",
+                                       "Infections averted per dose lower 95% CrI","Infections averted per dose upper 95% CrI"
+)
+
+
+
+################################################################################
+## SAVE ALL FIGURES AND DATA 
 
 
 if( assumptions == "fix_prop_SW"){
@@ -2158,10 +2340,7 @@ if( assumptions == "fix_prop_SW"){
   source_data_list<- list(
     `Equateur results (fixed SW proportion)` = data_averted_eq,
     `Sud Kivu results (fixed SW proportion)` = data_averted_sk,
-    `Burundi results (fixed SW proportion)` = data_averted_bu,
-    `Figure S20B` = best_case_scenario_eq_deaths,
-    `Figure S21B` = best_case_scenario_sk_deaths,
-    `Figure S28B` = best_case_scenario_bu_all
+    `Burundi results (fixed SW proportion)` = data_averted_bu
   )
   
   write_xlsx(source_data_list, paste("outputs/rerun/Source-Data-",assumptions,".xlsx", sep=""))
@@ -2201,7 +2380,10 @@ if( assumptions == "fix_prop_SW"){
     `Burundi results` = data_averted_bu,
     `Figure 3B` = best_case_scenario_eq,
     `Figure 4B` = best_case_scenario_sk,
-    `Figure 5B` = best_case_scenario_bu
+    `Figure 5B` = best_case_scenario_bu,
+    `Figure S20B` = best_case_scenario_eq_deaths,
+    `Figure S21B` = best_case_scenario_sk_deaths,
+    `Figure S28B` = best_case_scenario_bu_all
   )
   
   write_xlsx(source_data_list, "outputs/rerun/Source-Data.xlsx")

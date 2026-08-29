@@ -3,10 +3,12 @@ library(ggplot2)
 library(tidyr)
 
 orderly_pars <- orderly2::orderly_parameters(deterministic = FALSE,
+                                             assumptions = "standard",
                                              short_run = FALSE,
                                              fit_by_age = TRUE,
                                              fit_KPs=TRUE,
                                              vaccines_onset= "end")
+#list2env(orderly_pars, environment())
 
 # Declare files that you promise to produce, and describe them
 orderly2::orderly_artefact(description = "Big df with all scenarios outputs",
@@ -32,6 +34,26 @@ scenario_grid_burundi$scenario_num <- 1:nrow(scenario_grid_burundi)
 scenario_grid_burundi <- scenario_grid_burundi |> mutate(scenario_new = scenario_name)
 
 
+# scenario_grid_burundi_sens_analysis <- readRDS(file = "scenario_grid_burundi_sens_analysis.RDS") 
+# 
+# scenario_grid_burundi_sens_analysis |>
+#   select(-region) |>
+#   mutate(total_doses_children=as.numeric(total_doses_children),
+#          total_doses_adults=as.numeric(total_doses_adults),
+#          doses_per_day_total=as.numeric(doses_per_day_total),
+#          daily_vax_split_children=as.numeric(daily_vax_split_children),
+#          days_between_doses=as.numeric(days_between_doses),
+#          prioritisation_children = as.character(prioritisation_children),
+#          prioritisation_adults = as.character(prioritisation_adults),
+#          vaccine_dose_scenario = as.character(vaccine_dose_scenario),
+#          uptake_realised=as.numeric(uptake_realised))-> scenario_grid_burundi_sens_analysis
+# 
+# 
+# scenario_grid_burundi <- rbind(
+#   scenario_grid_burundi,
+#   scenario_grid_burundi_sens_analysis
+# )
+
 
 # Importing all the outputs from the different scenarios 
 for (i in 1:nrow(scenario_grid_burundi)) {
@@ -56,6 +78,7 @@ for (i in 1:nrow(scenario_grid_burundi)) {
     quote(latest( parameter:short_run == this:short_run &&
                      parameter:fit_by_age == this:fit_by_age &&
                      parameter:deterministic == this:deterministic &&
+                     parameter:assumptions == this:assumptions &&
                      parameter:fit_KPs== this:fit_KPs &&
                      parameter:total_doses_adults == environment:total_doses_adults && 
                      parameter:total_doses_children == environment:total_doses_children && 
@@ -172,6 +195,11 @@ for (i in 1:nrow(scenarios)){
       mean_averted_per_dose = mean(averted/cumulative_dose, na.rm = TRUE),
       lower_averted_95_per_dose= quantile(averted/cumulative_dose, 0.025, na.rm = TRUE),
       upper_averted_95_per_dose = quantile(averted/cumulative_dose, 0.975, na.rm = TRUE),
+      # Metrics for outcomes averted per dose - fractional
+      median_averted_per_dose_frac = median(averted/(cumulative_dose/5), na.rm = TRUE),
+      mean_averted_per_dose_frac = mean(averted/(cumulative_dose/5), na.rm = TRUE),
+      lower_averted_95_per_dose_frac = quantile(averted/(cumulative_dose/5), 0.025, na.rm = TRUE),
+      upper_averted_95_per_dose_frac = quantile(averted/(cumulative_dose/5), 0.975, na.rm = TRUE),
       # Metrics for total dose
       median_cumulative_doses = median(cumulative_dose, na.rm = TRUE),
       mean_cumulative_doses = mean(cumulative_dose, na.rm = TRUE),
@@ -196,7 +224,7 @@ if(vaccines_onset=="start"){
   }
   ## load a samples.rds output from
   orderly2::orderly_dependency(name = "pmcmc_burundi",
-                               "latest(parameter:deterministic == this:deterministic && parameter:short_run == this:short_run)",
+                               "latest(parameter:deterministic == this:deterministic && parameter:assumptions == this:assumptions && parameter:short_run == this:short_run)",
                                files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                           "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
 

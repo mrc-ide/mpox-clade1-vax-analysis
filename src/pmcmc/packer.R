@@ -16,6 +16,10 @@ create_packer <- function(region, assumptions, mixing_matrix,
     fitted_pars <- fitted_pars[fitted_pars != "beta_z_max"]
   }
   
+  if (assumptions == "fix_prop_SW") {
+    fitted_pars <- fitted_pars[fitted_pars != "prop_SW"]
+  }
+  
   if (region == "both") {
     groups <- c("equateur", "sudkivu")
     
@@ -82,6 +86,16 @@ get_fixed <- function(region, assumptions, mixing_matrix,
   fixed$m_sex <- NULL
   fixed$m_gen_pop <- NULL
   
+  if (assumptions == "fix_prop_SW") {
+    if (region == "equateur") {
+      ## 0.44%
+      fixed$prop_SW <- 0.44 / 100 
+    } else if (region == "sudkivu") {
+      ## 0.60%
+      fixed$prop_SW <- 0.60 / 100
+    }
+  }
+  
   names(fixed)[names(fixed) == "CFR"] <- "CFR_0"
   
   names(fixed)[names(fixed) == "seed_rate"] <- "seed_profile"
@@ -103,7 +117,7 @@ process <- function(x) {
   ## Calc. duration of infectiousness by age, weighted by disease severity
   ## We assume here that the R0 calculation that duration_infectious_by_age
   ## is used in is based on duration_infectious_by_age in unvaccinated
-  ## individuals (i.e. with the unvaccinated CFR)
+  ## individuals (i.e. with the unvaxxed CFR)
   k <- 1 # number of compartments per infectious disease state
   dt <- 1 # timestep
   idx <- mpoxseir::get_compartment_indices()
@@ -132,6 +146,8 @@ process <- function(x) {
   
   
   ## Calculate beta_household given R0, mixing matrix and duration of infectiousness
+  ## Note this isn't quite correct and we need to sort this
+  ## We should be include household contacts of PBS and SWs
   m_gen_pop <- demographic_params$m_gen_pop
   beta_h <- x$R0_hh / 
     Re(eigen(m_gen_pop * duration_infectious_by_age)$values[1])

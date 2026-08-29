@@ -43,40 +43,51 @@ get_data <- function(x, start_date, end_date) {
 }
 
 
-get_prior <- function(){
-  monty::monty_dsl({
-    alpha_cases ~ Beta(1, 9)
-    phi_05_14 ~ Beta(1, 1)
-    phi_15_plus ~ Beta(1, 1)
-    prop_SW ~ Beta(2, 2 * (1 / 0.018 - 1))
-    R0_hh ~ Gamma(shape = 18.01306, scale = 0.02295737)
-    R0_sw_st ~ Uniform(0, 10)
-    rho ~ Beta(1, 1)
-  }, gradient = FALSE)
+get_prior <- function(assumptions){
+  if (assumptions == "standard") {
+    monty::monty_dsl({
+      alpha_cases ~ Beta(1, 9)
+      phi_05_14 ~ Beta(1, 1)
+      phi_15_plus ~ Beta(1, 1)
+      prop_SW ~ Beta(2, 2 * (1 / 0.018 - 1))
+      R0_hh ~ Gamma(shape = 18.01306, scale = 0.02295737)
+      R0_sw_st ~ Uniform(0, 10)
+      rho ~ Beta(1, 1)
+    }, gradient = FALSE)
+  } else if (assumptions == "fix_prop_SW") {
+    monty::monty_dsl({
+      alpha_cases ~ Beta(1, 9)
+      phi_05_14 ~ Beta(1, 1)
+      phi_15_plus ~ Beta(1, 1)
+      R0_hh ~ Gamma(shape = 18.01306, scale = 0.02295737)
+      R0_sw_st ~ Uniform(0, 10)
+      rho ~ Beta(1, 1)
+    }, gradient = FALSE)  
+  }
 }
 
 
-create_mcmc_pars <- function(deterministic, region) {
+create_mcmc_pars <- function(region, deterministic, assumptions) {
   type <- if (deterministic) "deterministic" else "stochastic"
-  info_file <- paste("parameters", region, type, "info.csv", sep = "/")
-  proposal_file <- paste("parameters", region, type, "proposal.csv", sep = "/")
+  pars_folder <- paste("parameters", region, type, assumptions, sep = "/")
+  info_file <- paste(pars_folder, "info.csv", sep = "/")
+  proposal_file <- paste(pars_folder, "proposal.csv", sep = "/")
   info <- read.csv(info_file)
-
   proposal <- read.csv(proposal_file)
   proposal_names <- proposal[, 1]
   proposal <- as.matrix(proposal[, -1])
   row.names(proposal) <- colnames(proposal) <- proposal_names
   
-  rownames(info) <- info$name
   
   if (region == "both") {
     if (!identical(gsub("<both>", "", paste0(info$name, "<", info$region, ">")), 
                    row.names(proposal))) {
       stop("info and proposal files do not match")
     }
+    
     initial <- info$initial
     names(initial) <- row.names(proposal)
-  
+    
   } else {
     
     if (!identical(info$name, row.names(proposal))) {
@@ -90,7 +101,7 @@ create_mcmc_pars <- function(deterministic, region) {
   if (!deterministic) {
     proposal <- 2.38^2 / nrow(proposal) * proposal
   }
-
+  
   list(initial = initial,
        vcv = proposal)
 }
@@ -194,7 +205,7 @@ save_pars_inputs <- function(samples, mcmc_pars, region) {
 
 
 run_pmcmc <- function(filter, packer, mcmc_pars, control, deterministic,
-                      snapshots) {
+                      snapshots, assumptions) {
   index <- save_index(rt = TRUE)
   
   snapshots <- mpoxseir::mpoxseir_date(snapshots)
@@ -204,7 +215,7 @@ run_pmcmc <- function(filter, packer, mcmc_pars, control, deterministic,
                                              save_trajectories = index$idx,
                                              save_snapshots = snapshots)
   
-  prior <- get_prior()
+  prior <- get_prior(assumptions)
   
   density <- likelihood + prior 
   

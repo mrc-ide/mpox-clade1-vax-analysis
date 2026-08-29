@@ -7,6 +7,7 @@ orderly_pars <-
                                use_both_fit = FALSE,
                                mixing_matrix = "Zimbabwe",
                                deterministic = FALSE,
+                               assumptions = "standard",
                                short_run = FALSE,
                                fit_by_age = TRUE,
                                fit_KPs = TRUE,
@@ -16,22 +17,26 @@ orderly_pars <-
                                total_doses_adults=2000,  ## number of doses of MVA-BN (over 18 only)
                                doses_per_day_total=200, ## total number of vaccines that can be given daily (for adults and children)
                                daily_vax_split_children=0.5, ## what proportion of doses_per_day will be allocated to vaccinating children over adults
-                               vaccine_dose_scenario ="2_doses_prioritise_delay", # "1st_dose_only" or "2_doses_prioritise_delay" or "2_doses_prioritise_1st" or no_vaccine ## are we giving 2nd doses or only first doses
+                               vaccine_dose_scenario ="2_doses_prioritise_delay", # "1st_dose_only" or "2_doses_prioiritise_delay" or "2_doses_prioritise_1st" or no_vaccine ## are we giving 2nd doses or only first doses
                                days_between_doses = 28, ## for adults, how many days do we wait between giving 1st and 2nd doses (default is 28; if only in a 1st dose scenario then this parameter isn't used),
                                prioritisation_children ="children_all_equal",  # "children_all_equal", "children_age_gradient_all","children_age_younger_older")
                                prioritisation_adults ="adults_all_equal",# "adults_all_equal", "adults_all_key_pops", "adults_HCW_first_KP"
                                uptake_realised = 1,
                                t_ve = 28,
                                vaccine_used = "mix",
-                               vaccines_onset = "end")
-list2env(orderly_pars, environment())
+                               vaccines_onset = "start")
+#list2env(orderly_pars, environment())
 
 
 # load a samples.rds output from
 orderly2::orderly_dependency(name = "pmcmc_burundi",
-                             "latest(parameter:mixing_matrix == this:mixing_matrix && parameter:deterministic == this:deterministic && parameter:short_run == this:short_run)",
+                             "latest(parameter:mixing_matrix == this:mixing_matrix &&
+                             parameter:deterministic == this:deterministic &&
+                             parameter:assumptions == this:assumptions &&
+                             parameter:short_run == this:short_run)",
                              files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                         "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
+
 
 
 
@@ -89,12 +94,12 @@ if (use_both_fit) {
 
 # ## get the end time point of the fits
 t1 <- ifelse(vaccines_onset=="start", min(data$data$date), max(data$data$date)) ## this means this day is already covered so we care about running forward from t1 + 1
-
+# tv <- mpoxseir::mpoxseir_date(Sys.Date()) + (7 - (mpoxseir::mpoxseir_date(Sys.Date()) %% 7))
 
 # Run scenario for 72 weeks to take into account delay in Bujumbura onset compared to DRC
 # - scenarios will run until end of DRC scenarios 371+104*7 = 1099 from start of Bujumbura epidemic 595; (1099-595)/7 = 72 weeks
 if(vaccines_onset=="start"){
-  n_weeks <- 72 
+  n_weeks <- 72 # (max(data$data$date) - min(data$data$date)) / 7 + 52
 }
 
 ## Get the vaccine scenario parameters
@@ -158,13 +163,12 @@ index <- save_index(vax = TRUE, rt = TRUE)
 
 ## Running the model n_weeks forward from t1
 days_per_week <- 7
-
 ## length of time set to two years from beginning of vaccination
 output_times <- c(0, seq_len(n_weeks) * days_per_week) +  t1
 output <- dust2::dust_system_simulate(sys, output_times, index_state = unlist(full_index[index$idx]))
 rownames(output) <- index$names
 
-output <- calc_Rt_scenarios(output, pars, region)
+ output <- calc_Rt_scenarios(output, pars, region)
 
 
 ### Post process the outputs so it is in a nice data frame
@@ -182,6 +186,8 @@ df <- cbind(indices, Value = as.vector(output))
 category_names <- names(output[, 1, 1])
 
 df$Category <- factor(df$Category, labels = category_names)
+
+## think relates to mpoxseir::model_index(info)$state?
 
 ### Saving the output in the Outputs folder
 dir.create("outputs", FALSE, TRUE)

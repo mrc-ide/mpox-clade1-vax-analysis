@@ -1,6 +1,6 @@
 update_inputs <- function(region, assumptions, from_deterministic, to_deterministic) {
   ## Set working directory to project directory
-  setwd(orderly2:::orderly_src_root(NULL, TRUE))
+  #setwd(orderly2:::orderly_src_root(NULL, TRUE))
   
   ## Find the latest report for the given region
   latest <- 
@@ -26,6 +26,8 @@ update_inputs <- function(region, assumptions, from_deterministic, to_determinis
 
 ## example usage: update the inputs for Equateur from the latest deterministic
 ## fit to use for deterministic fitting
+# update_inputs("equateur", "standard", from_deterministic = TRUE, to_deterministic = TRUE)
+
 
 remove_parameter <- function(region, assumptions, deterministic, par_name) {
   type <- if (deterministic) "deterministic" else "stochastic"

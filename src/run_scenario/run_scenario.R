@@ -7,6 +7,7 @@ orderly_pars <-
                                use_both_fit = FALSE,
                                mixing_matrix = "Zimbabwe",
                                deterministic = FALSE,
+                               assumptions = "standard",
                                short_run = FALSE,
                                fit_by_age = TRUE,
                                fit_KPs = TRUE,
@@ -16,7 +17,7 @@ orderly_pars <-
                                total_doses_adults=2000,  ## number of doses of MVA-BN (over 18 only)
                                doses_per_day_total=200, ## total number of vaccines that can be given daily (for adults and children)
                                daily_vax_split_children=0.5, ## what proportion of doses_per_day will be allocated to vaccinating children over adults
-                               vaccine_dose_scenario ="2_doses_prioritise_delay", # "1st_dose_only" or "2_doses_prioritise_delay" or "2_doses_prioritise_1st" or no_vaccine ## are we giving 2nd doses or only first doses
+                               vaccine_dose_scenario ="2_doses_prioritise_delay", # "1st_dose_only" or "2_doses_prioiritise_delay" or "2_doses_prioritise_1st" or no_vaccine ## are we giving 2nd doses or only first doses
                                days_between_doses = 28, ## for adults, how many days do we wait between giving 1st and 2nd doses (default is 28; if only in a 1st dose scenario then this parameter isn't used),
                                prioritisation_children ="children_all_equal",  # "children_all_equal", "children_age_gradient_all","children_age_younger_older")
                                prioritisation_adults ="adults_all_equal",# "adults_all_equal", "adults_all_key_pops", "adults_HCW_first_KP"
@@ -24,16 +25,16 @@ orderly_pars <-
                                uptake_realised = 1,
                                t_ve = 28, 
                                R0_SW_reduction=0, # percentage reduction in SW R0
-                               vaccines_onset="start" 
+                               vaccines_onset="start" #"start"/"end" - or snapshot date?
   )
-
+#list2env(orderly_pars, environment())
 
 region_fit <- if (use_both_fit) "both" else region
 
 ## load a samples.rds output from
 orderly2::orderly_dependency(name = "pmcmc",
                              "latest(parameter:region == environment:region_fit && parameter:mixing_matrix == this:mixing_matrix && parameter:deterministic == this:deterministic && parameter:fit_by_age == this:fit_by_age &&
-                             parameter:fit_KPs == this:fit_KPs && parameter:short_run == this:short_run)",
+                             parameter:fit_KPs == this:fit_KPs && parameter:assumptions == this:assumptions && parameter:short_run == this:short_run)",
                              files =  c("inputs/samples.rds" = "outputs/samples.rds",
                                         "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
 
@@ -88,8 +89,10 @@ samples$pars[paste0("R0_sw_st<",region,">"),]<-samples$pars[paste0("R0_sw_st<",r
   samples$pars[paste0("R0_sw_st"),]<-samples$pars[paste0("R0_sw_st"),]*(1-R0_SW_reduction)
 }
 
-## take your sampled parameters and transform each parameter set,
+## take you sampled parameters and transform each parameter set,
 ## creating a list of lists
+## here's where we will probably want to edit the transformed parameters in
+## some way (update vaccine schedules)
 pars <- lapply(seq_len(ncol(samples$pars)),
                function (i) samples$packer$unpack(samples$pars[, i]))
 if (use_both_fit) {
@@ -97,12 +100,13 @@ if (use_both_fit) {
 }
 
 
-# get the end time point of the fits
+# ## get the end time point of the fits
 t1 <- ifelse(vaccines_onset=="start", min(data$data$date), max(data$data$date)) ## this means this day is already covered so we care about running forward from t1 + 1
+# tv <- mpoxseir::mpoxseir_date(Sys.Date()) + (7 - (mpoxseir::mpoxseir_date(Sys.Date()) %% 7))
 
 # Run scenarios for 2 years:
 if(vaccines_onset=="start"){
-  n_weeks <- 104 
+  n_weeks <- 104 #(max(data$data$date) - min(data$data$date)) / 7 + 52
 }
 
 ## Get the vaccine scenario parameters
@@ -127,6 +131,9 @@ for (i in 1:length(pars)) {
   # Update the parameters from the fittings with the vaccine scenario parameters
   for (nm in names(vax_pars$model_vax_inputs)) {
     pars[[i]][[nm]] <- vax_pars$model_vax_inputs[[nm]]
+    # pars[[i]]$phi_00_04 <- 1
+    # pars[[i]]$phi_05_14 <- 1
+    # pars[[i]]$phi_15_plus <- 1
   }
 }
 

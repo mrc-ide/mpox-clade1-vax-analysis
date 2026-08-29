@@ -1,19 +1,31 @@
 
-orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='sudkivu')",
-  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
-orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='equateur')",
-  files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
-orderly2::orderly_dependency(
-  name = "pmcmc_burundi", 
-  query =  "latest()", 
-  files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds"))
+orderly2::orderly_parameters(short_run = FALSE,
+                             fit_by_age = TRUE,
+                             deterministic = FALSE,
+                             mixing_matrix = "Zimbabwe",
+                             fit_KPs = TRUE, 
+                             assumptions = "standard",
+                             vaccines_onset = "start")
+
+
+  orderly2::orderly_dependency(
+    name = "pmcmc",
+    query = "latest(parameter:region=='sudkivu' && parameter:assumptions==this:assumptions)",
+    files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
+              "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
+  
+  orderly2::orderly_dependency(
+    name = "pmcmc",
+    query = "latest(parameter:region=='equateur' && parameter:assumptions==this:assumptions)",
+    files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
+              "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
+  
+  orderly2::orderly_dependency(
+    name = "pmcmc_burundi", 
+    query =  "latest(parameter:assumptions==this:assumptions)", 
+    files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
+              "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds"))
+
 
 orderly2::orderly_resource("support.R")
 orderly2::orderly_shared_resource("calc-Rt.R")
@@ -26,14 +38,24 @@ library(mpoxseir)
 library(ggsflabel)
 library(ggplot2)
 
-cols_region <- c(MetBrewer::met.brewer("Cassatt1", 7)[c(5,1)],MetBrewer::met.brewer("Demuth", 3)[3], MetBrewer::met.brewer("Cassatt1", 7)[3]) 
+# # palette.colors(palette = "Dark 2")
+# "#1B9E77" "#D95F02" "#7570B3" "#E7298A" "#66A61E" "#E6AB02" "#A6761D" "#666666"
+# # palette.colors(palette = "Tableau 10") 
+#"#4E79A7" "#F28E2B" "#E15759" "#76B7B2" "#59A14F" "#EDC948" "#B07AA1" "#FF9DA7" "#9C755F" "#BAB0AC"
+
+# Tableau 10
+cols_region <- c("#B07AA1", "#E15759", "#9C755F", "#FF9DA7")
+cols_transmission <-  c( "#76B7B2","#4E79A7", "#59A14F", "#EDC948")
+
+# # Dark 2
+# cols_region <- c("#7570B3",  "#D95F02","#A6761D", "#E7298A" )
+# cols_transmission <-  c( "#666666","#1B9E77", "#66A61E", "#E6AB02" )
+
+c(MetBrewer::met.brewer("Cassatt1", 7)[c(5,1)],MetBrewer::met.brewer("Demuth", 3)[3], MetBrewer::met.brewer("Cassatt1", 7)[3]) 
 names(cols_region) <- c("equateur", "sudkivu", "both", "burundi")
 nms_region <- c(equateur = "DRC: Equateur", sudkivu = "DRC: Sud Kivu", burundi = "Burundi: Bujumbura")
-cols_transmission <- MetBrewer::met.brewer("Hokusai3", 4)
-
 
 # fitting plots ----------------------------------------------------------------
-both <- "separate"
 
 # data preparation
 # read in data dependencies
@@ -170,6 +192,23 @@ g_zoonotic2 <- daily_zoonotic_summary_tidy |>
         #legend.position.inside = "inside",
         legend.position = "none")#c(0.8,0.8))
 
+# old R0 plots
+# g_R0 <- pars_tidy |> 
+#   filter(name %in% c( "R0_sw_st", "R0_hh")) |> 
+#   mutate(name=case_when(name=="R0_sw_st"~ "R0 sexual",
+#                         name=="R0_hh"~ "R0 household")) |>
+#   ggplot(aes(x = value, fill = region)) +
+#   geom_density(alpha = 0.7, colour = "transparent", position = "identity",
+#                  show.legend = TRUE) +
+#   scale_fill_manual(values = cols_region[c(-3)], 
+#                     labels = c(nms_region, both="Both"), 
+#                     drop = FALSE) +
+#   labs(y="Density", fill=NULL, x=NULL)+
+#   facet_grid(rows = vars(name), scales = "free") +
+#   geom_vline(xintercept = 1, lty = 2) +
+#   theme_bw()+
+#   theme(strip.background = element_blank(),
+#         text=element_text(size=12))
 
 # new R0 plot
 g_R0 <- r0 |> 
@@ -265,14 +304,14 @@ g_transmission <- state_tidy |>
   theme_bw() +
   labs(x = "\nProportion of cumulative infections",
        fill = "Transmission\nroute", y = "")
-
-ggsave(paste0("outputs/transmission_route_", both, ".png"), g_transmission, 
-       width = 10, height = 5,
-       units = "cm", scale = 1.2)
-
-ggsave(paste0("outputs/severity_", both,".png"), g_cfr2, 
-       width = 10, height = 5,
-       units = "cm", scale = 1.5)
+# 
+# ggsave(paste0("outputs/transmission_route_", both, ".png"), g_transmission,
+#        width = 10, height = 5,
+#        units = "cm", scale = 1.2)
+# 
+# ggsave(paste0("outputs/severity_", both,".png"), g_cfr2,
+#        width = 10, height = 5,
+#        units = "cm", scale = 1.5)
 
 g <- ((g_R0 | (g_zoonotic2)) /
         g_transmission) +
@@ -358,15 +397,15 @@ g_obs_under_cases_b <- trajectories |>
   coord_cartesian(xlim=c(as.Date("2024-01-01"), max(trajectories_b$date)))
 
 
-ggsave(paste0("outputs/cases_fits_underlying_sudkivu_", both,".png"), g_obs_under_cases_s,
-       width = 10, height = 8, scale = 1.5,
-       units = "cm")
-ggsave(paste0("outputs/cases_fits_underlying_equateur_", both,".png"), g_obs_under_cases_e,
-       width = 10, height = 8, scale = 1.5,
-       units = "cm")
-ggsave(paste0("outputs/cases_fits_underlying_burundi_", both,".png"), g_obs_under_cases_b,
-       width = 10, height = 8, scale = 1.5,
-       units = "cm")
+# ggsave(paste0("outputs/cases_fits_underlying_sudkivu_", both,".png"), g_obs_under_cases_s,
+#        width = 10, height = 8, scale = 1.5,
+#        units = "cm")
+# ggsave(paste0("outputs/cases_fits_underlying_equateur_", both,".png"), g_obs_under_cases_e,
+#        width = 10, height = 8, scale = 1.5,
+#        units = "cm")
+# ggsave(paste0("outputs/cases_fits_underlying_burundi_", both,".png"), g_obs_under_cases_b,
+#        width = 10, height = 8, scale = 1.5,
+#        units = "cm")
 
 g_Rt <- rt |>
   pivot_wider(names_from="state") |>
@@ -385,9 +424,9 @@ g_Rt <- rt |>
   theme(strip.background = element_rect(fill="white")) +
   labs(x = "", y = "Effective reproduction number")
 
-ggsave(paste0("outputs/rt_", both,".png"), g_Rt,
-       width = 10, height = 10, scale = 1.5,
-       units = "cm")
+# ggsave(paste0("outputs/rt_", both,".png"), g_Rt,
+#        width = 10, height = 10, scale = 1.5,
+#        units = "cm")
 
 
 # map plot ---------------------------------------------------------------------
@@ -437,13 +476,13 @@ map <- ggplot() +
   geom_sf_label_repel(data=sf_d_1[sf_d_1$loc=="DRC: Sud Kivu",], aes(label = loc), 
                       size = 5, fill=cols_region[[2]],
                       nudge_x = -9, nudge_y = -9) +
-  theme_void()+
-  labs(fill=NULL, col=NULL)+
+  theme_minimal()+
+  labs(fill=NULL, col=NULL, x=NULL, y=NULL)+
   theme(legend.position = "none")
 
-ggsave("outputs/map.png", map,
-       width = 10, height = 10, scale = 1.5,
-       units = "cm")
+# ggsave("outputs/map.png", map,
+#        width = 10, height = 10, scale = 1.5,
+#        units = "cm")
 
 
 
@@ -451,6 +490,7 @@ ggsave("outputs/map.png", map,
 # Map
 # Phi
 # fits/cases/infections
+#legend_top <- cowplot::get_plot_component(g_obs_under_cases_b, "guide-box", return_all = TRUE)[[3]]
 legend_top <- cowplot::get_legend(g_obs_under_cases_b)
 fig1_a <- cowplot::plot_grid(map, 
                              g_phi + theme(legend.position = "none"),
@@ -467,57 +507,139 @@ fig1 <- cowplot::plot_grid(fig1_a,
                            ncol=2, rel_widths = c(0.8,1)) 
 fig1
 
-ggsave("outputs/Figure_1.png", fig1,
-       width = 15, height = 15, scale = 1.5,
-       units = "cm")
-
-# Figure 2 ---------------------------------------------------------------------
-# Rt hist
-# zoonotic
-# bars
-# CFR
-
-g_transmission + theme(legend.position = "bottom",legend.text = element_text(size=12),
-                       text=element_text(size=12))+
-  labs(fill=NULL, 
-       x="Proportion of cumulative infections\nby transmission route")+
-  scale_y_discrete(labels=c('DRC\nSud Kivu', 'DRC\nEquateur', 'Burundi\nBujumbura')) -> g_transmission2
 
 
-fig2_left <- cowplot::plot_grid(g_R0 + 
-                                  theme(legend.text = element_text(size=10),
-                                        legend.position=c(0.75,0.5)),
-                                g_SW + labs(fill=NULL) + theme(legend.position = "none"),
-                                
-                                ncol=1, labels=c("A","B"),
-                                rel_heights = c(0.9,0.325), align="v")
 
-fig2_rightb <- cowplot::plot_grid(
-  g_zoonotic2,
-  g_cfr2 + theme(legend.text = element_text(size=10),
-                 legend.position = c(0.7,0.7)),
-  ncol=1,
-  labels=c("D","E"), align="v",
-  rel_heights = c(0.9,0.9))
+### Supp Figure fits ------------------
 
-fig2_right <- cowplot::plot_grid(g_transmission2,
-                                 fig2_rightb,
-                                 ncol=1,
-                                 labels=c("C",""),
-                                 rel_heights = c(0.9,1.8))
+#legend_top <- cowplot::get_plot_component(g_obs_under_cases_b, "guide-box", return_all = TRUE)[[3]]
+
+fig_fits <- cowplot::plot_grid(g_obs_under_cases_e + theme(legend.position = "none"), 
+                               g_obs_under_cases_s + theme(legend.position = "none"),
+                               g_obs_under_cases_b + theme(legend.position = "none"),
+                               nrow=1, labels=c("A", "B", "C"),
+                               rel_heights = c(1,1,1))
 
 
-fig2 <- cowplot::plot_grid(fig2_left,
-                           fig2_right,
-                           rel_heights = c(1,0.9),
-                           ncol=2,
-                           labels=NULL, align="v") 
-fig2
+fig_fits
 
-ggsave("outputs/Figure_2.png", fig2,
-       width = 20, height = 16, scale = 1.5,
-       units = "cm")
 
-# R0 summaries
+
+
+
+#R0 summaries
 r0_summary <- r0 |> group_by(region, name) |> summarise(mean=mean(value), lower_95=quantile(value, 0.025), upper_95=quantile(value,0.975))
+
+
+### excel files
+# combine trajectories and fitted data
+#equateur 
+fitting_data_e <- fitting_data_e |>
+  mutate(date = mpoxseir_date_as_date(date))
+
+trajectories_e <- trajectories_e|>
+  pivot_wider(names_from = name, values_from = value)
+
+Fig1_eq_data <- full_join(fitting_data_e, trajectories_e, by=c("date","region"))
+
+#sud kivu
+fitting_data_s <- fitting_data_s |>
+  mutate(date = mpoxseir_date_as_date(date))
+
+trajectories_s <- trajectories_s|>
+  pivot_wider(names_from = name, values_from = value)
+
+Fig1_sk_data <- full_join(fitting_data_s, trajectories_s, by=c("date","region"))
+
+# bujumbura
+fitting_data_b <- fitting_data_b |>
+  mutate(date = mpoxseir_date_as_date(date))
+
+trajectories_b <- trajectories_b|>
+  pivot_wider(names_from = name, values_from = value)
+
+Fig1_bu_data <- full_join(fitting_data_b, trajectories_b, by=c("date","region"))
+
+library(writexl)
+
+if( assumptions == "fix_prop_SW"){
+  # Figure excel sheet
+  source_data_list <- list(
+    `Figure S27A` = Fig1_eq_data,
+    `Figure S27B` = Fig1_sk_data,
+    `Figure S27C` = Fig1_bu_data
+  )
+  
+  names(source_data_list) <- paste0(names(source_data_list)," (fixed SW proportion)" )
+  write_xlsx(source_data_list, paste("outputs/rerun/Source-Data-Fig1-",assumptions,".xlsx", sep=""))
+  
+  #### Supplementry information figure 
+  ## fix propr SW
+  save(fig_fits, file="outputs/fig_fits.RData")
+  ggsave(paste("outputs/Figure_",assumptions,"_fits.png",sep=""), fig_fits,
+         width = 20, height = 5, scale = 1.5,
+         units = "cm")
+}else{
+  
+  # Figure excel sheet
+  source_data_list <- list(
+    `Figure 1C` = Fig1_eq_data,
+    `Figure 1D` = Fig1_sk_data,
+    `Figure 1E` = Fig1_bu_data
+  )
+  write_xlsx(source_data_list, "outputs/rerun/Source-Data-Fig1.xlsx")
+  
+  #### MAIN PLOTS 
+  ## Figure 1
+  ggsave(paste("outputs/rerun/Figure_1.png",sep=""), fig1,
+         width = 15, height = 15, scale = 1.5,
+         units = "cm")
+  ggsave(paste("outputs/rerun/Figur_1.pdf",sep=""), fig1,
+         width = 15, height = 15, scale = 1.5,
+         units = "cm")
+  ## Figure 2
+  # Figure 2 ---------------------------------------------------------------------
+  
+  g_transmission + theme(legend.position = "bottom",legend.text = element_text(size=12),
+                         text=element_text(size=12))+
+    labs(fill=NULL, 
+         x="Proportion of cumulative infections\nby transmission route")+
+    scale_y_discrete(labels=c('DRC\nSud Kivu', 'DRC\nEquateur', 'Burundi\nBujumbura')) -> g_transmission2
+  
+  
+  fig2_left <- cowplot::plot_grid(g_R0 + 
+                                    theme(legend.text = element_text(size=10),
+                                          legend.position=c(0.725,0.5)),
+                                  g_transmission2,
+                                  #  g_SW + labs(fill=NULL) + theme(legend.position = "none"),
+                                  ncol=1, labels=c("A","B"),
+                                  rel_heights = c(1,0.6), align="v", axis="lr")
+  fig2_right <- cowplot::plot_grid(g_zoonotic2,
+                                   g_cfr2 + theme(legend.text = element_text(size=10),
+                                                  legend.position = c(0.75,0.5)),
+                                   ncol=1,
+                                   labels=c("C","D"),
+                                   rel_heights = c(1,1), align="v")
+  
+  
+  fig2 <- cowplot::plot_grid(fig2_left,
+                             fig2_right,
+                             rel_heights = c(1,1),
+                             ncol=2,
+                             labels=NULL, align="v") 
+  fig2
+  ggsave("outputs/rerun/Figure_2.png", fig2,
+         width = 22, height = 18, scale = 1.1,
+         units = "cm")
+  ggsave("outputs/rerun/Figure_2.pdf", fig2,
+         width = 22, height = 18, scale = 1.1,
+         units = "cm")
+  
+  #### Supplementry information figure 
+  #S19
+  ggsave(paste0("outputs/rerun/rt_", both,".png"), g_Rt,
+         width = 10, height = 10, scale = 1.5,
+         units = "cm")
+  
+}
 

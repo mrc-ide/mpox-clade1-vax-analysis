@@ -1,5 +1,6 @@
 get_par_labels <- function(par_names) {
   
+  
   regions <- character(length(par_names))
   regions[grepl("<equateur>", par_names)] <- '" (Equateur)"'
   regions[grepl("<sudkivu>", par_names)] <- '" (Sud-Kivu)"'
@@ -23,12 +24,16 @@ get_par_labels <- function(par_names) {
   
 }
 
-pairs_plot <- function(samples) {
+pairs_plot <- function(samples, region) {
   
   par_names <- rownames(samples$pars)
   samples$pars <- array(samples$pars, c(dim(samples$pars), 1))
   rownames(samples$pars) <- par_names
-  
+  if(region=="equateur"){
+    keep <- par_names != "lambda"
+    samples$pars <- samples$pars[keep, , , drop = FALSE]
+    par_names <- par_names[keep]
+  }
   samples_df <- posterior::as_draws_df(samples)
   samples_df$.iteration <- NULL
   samples_df$.chain <- NULL
@@ -50,17 +55,25 @@ pairs_plot <- function(samples) {
       axis.text.y = element_text(size = 11))
 }
 
-traceplots <- function(samples) {
+traceplots <- function(samples, region) {
   samples$pars <- samples$pars_full
   
   par_names <- rownames(samples$pars)
   par_labels <- get_par_labels(par_names)
   rownames(samples$pars) <- par_labels
-  
+  if(region=="equateur"){
+    keep <- par_names != "lambda"
+    samples$pars <- samples$pars[keep, , , drop = FALSE]
+    par_names <- par_names[keep]
+  }
   if ("density_full" %in% names(samples)) {
     samples$pars <- abind::abind(samples$pars, samples$density_full, along = 1)
     rownames(samples$pars)[nrow(samples$pars)] <- '"log posterior density"'
   }
+  
+  ## needs sorting for "both"
+  ## rownames(samples$pars) <- 
+  ##   gsub(">", "", gsub("<", "_", rownames(samples$pars)))
   
   samples_df <- posterior::as_draws_df(samples)
   
@@ -77,7 +90,7 @@ traceplots <- function(samples) {
   p
 }
 
-rankplots <- function(samples) {
+rankplots <- function(samples, region) {
   samples$pars <- samples$pars_full
   rownames(samples$pars) <- 
     gsub(">", "", gsub("<", "_", rownames(samples$pars)))
@@ -87,7 +100,11 @@ rankplots <- function(samples) {
   par_names <- rownames(samples$pars)
   par_labels <- get_par_labels(par_names)
   rownames(samples$pars) <- par_labels
-  
+  if(region=="equateur"){
+    keep <- par_names != "lambda"
+    samples$pars <- samples$pars[keep, , , drop = FALSE]
+    par_names <- par_names[keep]
+  }
   samples_df <- posterior::as_draws_df(samples)
   
   color_scheme <- unname(unlist(rev(bayesplot::color_scheme_get("viridis"))))

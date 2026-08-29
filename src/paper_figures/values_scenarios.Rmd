@@ -1,8 +1,8 @@
 ---
-title: "Values from plots"
+title: "Values from vaccine scenarios"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 date: "2025-06-27"
 ---
 
@@ -10,25 +10,31 @@ date: "2025-06-27"
 orderly_pars <- orderly2::orderly_parameters(short_run = FALSE,
                              fit_by_age = TRUE,
                              deterministic = FALSE,
+                             short_run = FALSE,
                              mixing_matrix = "Zimbabwe",
                              fit_KPs = TRUE, 
                              assumptions = "standard",
                              vaccines_onset = "start")
 list2env(orderly_pars, environment())
+library(tidyr)
 
 # Load in all dependencies 
 orderly2::orderly_dependency(
   name = "pmcmc",
-  query = "latest(parameter:region=='sudkivu' && parameter:assumptions == 'standard')",
+  query = "latest(parameter:region=='sudkivu')",
   files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
+            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
 orderly2::orderly_dependency(
   name = "pmcmc",
-  query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == 'standard')",
+  query = "latest(parameter:region=='equateur')",
   files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_equateur.png" = "outputs/traceplots.png"))
+            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds"))
+orderly2::orderly_dependency(
+  name = "pmcmc_burundi", 
+  query =  "latest()", 
+  files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
+            "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds"))
+
 orderly2::orderly_dependency(name = "run_postprocess",
                              "latest(parameter:region =='sudkivu' && 
                                      parameter:deterministic == FALSE && 
@@ -48,26 +54,48 @@ orderly2::orderly_dependency(name = "run_postprocess",
                                      parameter:vaccines_onset == 'start')",
                              files=c("inputs/runs_postprocess_equateur.RDS" = "outputs/runs_postprocess.RDS"))
 orderly2::orderly_dependency(name = "run_postprocess_burundi",
-                             "latest(parameter:deterministic == this:deterministic && 
-                             parameter:short_run == this:short_run)",
+                             "latest(parameter:deterministic == FALSE && 
+                             parameter:short_run == FALSE)",
                              files=c("inputs/runs_postprocess_burundi.RDS" = "outputs/runs_postprocess.RDS"))
-
-orderly2::orderly_dependency(name = "pmcmc_burundi",
-                             "latest(parameter:deterministic == this:deterministic && parameter:short_run == this:short_run)",
-                             files =  c("inputs/samples.rds" = "outputs/samples.rds",
-                                        "inputs/fitting_data.rds" = "outputs/fitting_data.rds"))
 # Populations of provinces
 province_pop<-mpoxseir::parameters_demographic(region="sudkivu")$province_pop
 
-# Scenario colour palette
-scenarios_palette_slides <- c("No vaccination"="black",
-                              "A: LC16m8"="#5B859EFF", 
-                              "B: A + MVA-BN >12y"= "#75884BFF",
-                              "C: MVA-BN"= "#D48F90FF" ,
-                              "D: C + 1st dose only"="#AB84A5FF",
-                              "E: D + <12y first"="#B38711FF",
-                              "F: D + key pops first"="#800000")
-# Region colour pallette
+
+######## Colour Palettes ########
+
+scenarios_palette_vaccine <- c("No vaccination" = "black",
+                               "LC16m8" = "#75884BFF",
+                               "LC16m8 & MVA-BN" = "#5B859EFF",
+                               "One dose MVA-BN"= "#800000",
+                               "Two doses MVA-BN"= "#B38711FF",
+                               "One dose fractional MVA-BN" = "#D48F90FF")
+#  #AB84A5FF"
+
+# all scenario names A-F
+scenario_names_plots <- c("A: LC16m8", 
+                          "B: LC16m8 + kids first",
+                          "C: LC16m8 & MVA-BN",
+                          "D: LC16m8 & MVA-BN + kids first", 
+                          "E: LC16m8 & MVA-BN + SWs first",
+                          "F: MVA-BN", 
+                          "G: MVA-BN + kids first", 
+                          "H: MVA-BN + SWs first",
+                          "I: MVA-BN + fractional",
+                          "J: MVA-BN + fractional + kids first",
+                          "K: MVA-BN + fractional + SWs first",
+                          "L: Two dose MVA-BN"
+                          )
+
+# line type
+linetype_priority <- c("All equal"="solid",
+                       "<12 years first"="dashed",
+                       "SWs first"="dotted")
+# shape
+shape_priority <- c("All equal"=4,
+                    "<12 years first"=16,
+                    "SWs first"=17)
+
+
 cols_region <- c(MetBrewer::met.brewer("Cassatt1", 7)[c(5,1)],MetBrewer::met.brewer("Demuth", 3)[3], MetBrewer::met.brewer("Cassatt1", 7)[3]) 
 names(cols_region) <- c("equateur", "sudkivu", "both", "burundi")
 nms_region <- c(equateur = "Equateur", sudkivu = "Sud Kivu", burundi = "Burundi")
@@ -78,24 +106,108 @@ start_date<-mpoxseir::mpoxseir_date_as_date(371) #+ 14
 
 library(tidyverse)
 
- 
+orderly2::orderly_resource("support.R")
+source("support.R")
+orderly2::orderly_shared_resource("calc-Rt.R")
+source("calc-Rt.R")
+
 ```
 
 
+
 ```{r setup, include=FALSE}
-
-
-# Equateur data
 region <-"equateur"
 
 # load in post process
-big_df_equateur_start <- readRDS("inputs/runs_postprocess_equateur.RDS")|> 
+big_df_equateur_start <-  readRDS("inputs/runs_postprocess_equateur.RDS") |> 
   mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
-  mutate(scenario_combo=scenario_name, 
-         scenario_name=sub(" \\(.*", "", scenario_new), 
-         scenario_dose=total_doses_children+total_doses_adults)|>
-  filter(scenario_num>49)
+  mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), 
+         scenario_dose=total_doses_children+total_doses_adults,
+         scenario_labels= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "A: LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "B: LC16m8 + kids first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "C: LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "D: LC16m8 & MVA-BN + kids first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "E: LC16m8 & MVA-BN + SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "F: MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "G: MVA-BN + kids first",
+           scenario_new=="MVA-BN  + 1st dose only + SWs first" ~ "H: MVA-BN + SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "I: MVA-BN + fractional",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "J: MVA-BN + fractional + kids first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "K: MVA-BN + fractional + SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "L: Two dose MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "M: Two dose MVA-BN + kids first",
+           scenario_new=="MVA-BN + SWs first" ~ "N: Two dose MVA-BN + SWs first"
+         ),
+         scenario_vaccine= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "LC16m8",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "LC16m8 & MVA-BN",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN  + 1st dose only + SWs first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + fractional" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "One dose fractional MVA-BN",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + SWs first" ~ "Two doses MVA-BN"
+         ),
+         scenario_priority= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "All equal",
+           scenario_new=="LC16m8 + kids first" ~ "<12 years first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "All equal",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "<12 years first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "All equal",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN  + 1st dose only + SWs first" ~ "SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "All equal",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "All equal",
+           scenario_new=="MVA-BN + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + SWs first" ~ "SWs first"
+         ),
+        
+         ) %>%
+  mutate(
+    scenario_dose_all = scenario_dose,
+    scenario_dose = case_when(
+    scenario_new=="MVA-BN + fractional" ~ scenario_dose/5,
+    scenario_new=="MVA-BN + fractional + kids first" ~ scenario_dose/5,
+    scenario_new=="MVA-BN + fractional + SWs first" ~ scenario_dose/5,
+    .default=scenario_dose
+  )) |>
+  mutate(scenario_priority = factor(scenario_priority,
+                                    levels=c("All equal","<12 years first",
+                                             "SWs first")))|>
+  mutate(scenario_doses_per_day_character=factor(format(scenario_doses_per_day_total, big.mark = ",", scientific = FALSE),
+                                                 levels=c("   250","   500"," 1,000",
+                                                          " 2,500"," 5,000","10,000", "20,000")))
 
+
+
+
+# Plot max dose scenario
+big_df_eq <- filter(big_df_equateur_start,
+                          scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)])
+
+# Region colour pallette
 # load in fitting data
 fitting_data_equateur <-  readRDS("inputs/fitting_data_equateur.RDS")
 
@@ -104,176 +216,307 @@ fitting_data_equateur <-  readRDS("inputs/fitting_data_equateur.RDS")
 region <-"sudkivu"
 
 # load in post process
-big_df_sudkivu_start <- readRDS("inputs/runs_postprocess_sudkivu.RDS")|> 
+big_df_sudkivu_start <-  readRDS("inputs/runs_postprocess_sudkivu.RDS") |> 
   mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
   mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), 
-         scenario_dose=total_doses_children+total_doses_adults)|>
-  filter(scenario_num>49)
+         scenario_dose=total_doses_children+total_doses_adults,
+         scenario_labels= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "A: LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "B: LC16m8 + kids first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "C: LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "D: LC16m8 & MVA-BN + kids first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "E: LC16m8 & MVA-BN + SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "F: MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "G: MVA-BN + kids first",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "H: MVA-BN + SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "I: MVA-BN + fractional",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "J: MVA-BN + fractional + kids first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "K: MVA-BN + fractional + SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "L: Two dose MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "M: Two dose MVA-BN + kids first",
+           scenario_new=="MVA-BN + SWs first" ~ "N: Two dose MVA-BN + SWs first"
+         ),
+         scenario_vaccine= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "LC16m8",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "LC16m8 & MVA-BN",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + fractional" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "One dose fractional MVA-BN",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + SWs first" ~ "Two doses MVA-BN"
+         ),
+         scenario_priority= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "All equal",
+           scenario_new=="LC16m8 + kids first" ~ "<12 years first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "All equal",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "<12 years first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "All equal",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "All equal",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "All equal",
+           scenario_new=="MVA-BN + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + SWs first" ~ "SWs first"
+         ),
+         
+  ) |>
+  mutate(
+    scenario_dose_all = scenario_dose,
+    scenario_dose = case_when(
+      scenario_new=="MVA-BN + fractional" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + kids first" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + SWs first" ~ scenario_dose/5,
+      .default=scenario_dose
+    )) |>
+  mutate(scenario_priority = factor(scenario_priority,
+                                    levels=c("All equal","<12 years first",
+                                             "SWs first")))|>
+  mutate(scenario_doses_per_day_character=factor(format(scenario_doses_per_day_total, big.mark = ",", scientific = FALSE),
+                                                 levels=c("   250","   500"," 1,000",
+                                                          " 2,500"," 5,000","10,000", "20,000")))
+
+
+# Plot max dose scenario
+big_df_sk <- filter(big_df_sudkivu_start,
+                          scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)])
+
 
 # load in fitting data 
 fitting_data_sudkivu <-  readRDS("inputs/fitting_data_sudkivu.RDS")
 
 
-# Bujumbura data 
+### Bujumbura data 
 region <- "bujumbura"
+
 ## Fitting outputs
-fitting_data_bujumbura <- readRDS("inputs/fitting_data.rds")
-
-big_df_bujumbura_start <- readRDS("inputs/runs_postprocess_burundi.RDS") |> 
-  mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), scenario_dose=total_doses_children+total_doses_adults)
+fitting_data_bujumbura <- readRDS("inputs/fitting_data_burundi.rds")
 
 
+# load in post process
 
-```
+# load in post process
+big_df_bujumbura_start <-  readRDS("inputs/runs_postprocess_burundi.RDS") |> 
+  mutate(Date = start_date + lubridate::days((TimeStep-1) * 7)) |> 
+  mutate(scenario_combo=scenario_name, scenario_name=sub(" \\(.*", "", scenario_new), 
+         scenario_dose=total_doses_children+total_doses_adults,
+         scenario_labels= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "A: LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "B: LC16m8 + kids first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "C: LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "D: LC16m8 & MVA-BN + kids first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "E: LC16m8 & MVA-BN + SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "F: MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "G: MVA-BN + kids first",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "H: MVA-BN + SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "I: MVA-BN + fractional",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "J: MVA-BN + fractional + kids first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "K: MVA-BN + fractional + SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "L: Two dose MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "M: Two dose MVA-BN + kids first",
+           scenario_new=="MVA-BN + SWs first" ~ "N: Two dose MVA-BN + SWs first"
+         ),
+         scenario_vaccine= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "LC16m8",
+           scenario_new=="LC16m8 + kids first" ~ "LC16m8",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "LC16m8 & MVA-BN",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "LC16m8 & MVA-BN",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "One dose MVA-BN",
+           scenario_new=="MVA-BN + fractional" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "One dose fractional MVA-BN",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "One dose fractional MVA-BN",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + kids first" ~ "Two doses MVA-BN",
+           scenario_new=="MVA-BN + SWs first" ~ "Two doses MVA-BN"
+         ),
+         scenario_priority= case_when(
+           # LC16m8 to everyone
+           scenario_new=="LC16m8" ~ "All equal",
+           scenario_new=="LC16m8 + kids first" ~ "<12 years first",
+           # LC16m8 to uner 12s & one dose MVA-BN to over 12s
+           scenario_new=="LC16m8 + MVA-BN >12y" ~ "All equal",
+           scenario_new=="LC16m8 + MVA-BN >12y + kids first" ~ "<12 years first",
+           scenario_new=="LC16m8 + MVA-BN >12y + SWs first" ~ "SWs first",
+           # One dose MVA-BN to everyone
+           scenario_new=="MVA-BN + 1st dose only" ~ "All equal",
+           scenario_new=="MVA-BN + 1st dose only + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + 1st dose only + SWs first" ~ "SWs first",
+           scenario_new=="MVA-BN + fractional" ~ "All equal",
+           scenario_new=="MVA-BN + fractional + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + fractional + SWs first" ~ "SWs first",
+           # Two doses of MVA-BN to everyone
+           scenario_new=="MVA-BN" ~ "All equal",
+           scenario_new=="MVA-BN + kids first" ~ "<12 years first",
+           scenario_new=="MVA-BN + SWs first" ~ "SWs first"
+         ),
+         
+  ) |>
+  mutate(
+    scenario_dose_all = scenario_dose,
+    scenario_dose = case_when(
+      scenario_new=="MVA-BN + fractional" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + kids first" ~ scenario_dose/5,
+      scenario_new=="MVA-BN + fractional + SWs first" ~ scenario_dose/5,
+      .default=scenario_dose
+    )) |>
+  mutate(scenario_priority = factor(scenario_priority,
+                                    levels=c("All equal","<12 years first",
+                                             "SWs first")))%>%
+  mutate(scenario_doses_per_day_character=factor(format(scenario_doses_per_day_total, big.mark = ",", scientific = FALSE),
+                                                 levels=c("   25","   50","  100","  250","  500","1,000", "2,000")))
 
-## Scenario C & D 
-
-Scenario C + D - max doses percentage infections:
-
-```{r C + D max}
-sudkivu_C_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
-
-equateur_C_cases<-filter(big_df_equateur_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
-
-bujumbura_C_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("C: MVA-BN"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm=TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)-5):max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)))
 
 
-# Scenario D
-sudkivu_D_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
-
-equateur_D_cases<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
-
-bujumbura_D_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("D: C + 1st dose only"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm=TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)-5):max(big_df_bujumbura_start$scenario_num, na.rm=TRUE)))
-
-
-print("Equateur percentage cases averted Scenario C:")
-equateur_C_cases$mean_percent
-equateur_C_cases$lower_95_percent
-equateur_C_cases$upper_95_percent
-equateur_C_cases$mean_cumulative_doses
-
-print("Equateur percentage cases averted Scenario D:")
-equateur_D_cases$mean_percent
-equateur_D_cases$lower_95_percent
-equateur_D_cases$upper_95_percent
-equateur_D_cases$mean_cumulative_doses
-
-print("Sud Kivu percentage cases averted Scenario C:")
-sudkivu_C_cases$mean_percent
-sudkivu_C_cases$lower_95_percent
-sudkivu_C_cases$upper_95_percent
-sudkivu_C_cases$mean_cumulative_doses
-
-print("Sud Kivu percentage cases averted Scenario D:")
-sudkivu_D_cases$mean_percent
-sudkivu_D_cases$lower_95_percent
-sudkivu_D_cases$upper_95_percent
-sudkivu_D_cases$mean_cumulative_doses
-
-print("Bujumbura percentage cases averted Scenario C:")
-bujumbura_C_cases$mean_percent
-bujumbura_C_cases$lower_95_percent
-bujumbura_C_cases$upper_95_percent
-bujumbura_C_cases$mean_cumulative_doses
-
-print("Bujumbura percentage cases averted Scenario D:")
-bujumbura_D_cases$mean_percent
-bujumbura_D_cases$lower_95_percent
-bujumbura_D_cases$upper_95_percent
-bujumbura_D_cases$mean_cumulative_doses
-
-
-```
-
-## Equateur
-
-Scenario A - max doses percentage infections and deaths averted:
-
-```{r Equateur}
-A_equateur_max<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
-
-A_equateur_max[,c("Category","mean_percent","lower_95_percent","upper_95_percent")]
-A_equateur_max[,c("Category","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
-
-```
-
-Scenario E & D - 320, 000 doses
-
-```{r Equateur 320}
-DE_equateur_320<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only", "E: D + <12y first"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"),total_doses_adults==320000)
-
-print("cases averted percentage:")
-DE_equateur_320[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-print("cases averted per dose:")
-DE_equateur_320[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
-
-DEF_equateur_640<-filter(big_df_equateur_start, scenario_name%in%c("D: C + 1st dose only", "E: D + <12y first", "F: D + key pops first"), TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"),total_doses_adults==640000)
-mean(DEF_equateur_640$mean_percent)
-mean(DEF_equateur_640$mean_averted_per_dose)
-```
-## Sud Kivu
-
-Scenario D and F - max doses percentage infections and deaths averted:
-
-```{r Sud Kivu max}
-sudkivu_max<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
-
-sudkivu_max[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-
-sudkivu_max[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
-
-sudkivu_max[,c("Category","scenario_name","scenario_dose","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
-
-```
-Scenario E - 1 million doses percentage infections and deaths averted:
-
-```{r Sud Kivu 1 mil}
-E_sudkivu_1mil<-filter(big_df_sudkivu_start,
-                      scenario_name == "E: D + <12y first",
-                      TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum", "deaths_inc_cum"),
-                      scenario_dose==1000000)
-
-E_sudkivu_1mil[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-```
-Scenario A-F - min doses percentage infections and deaths averted:
-
-```{r Sud Kivu infections min}
-sudkivu_min<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((min(big_df_sudkivu_start$scenario_num)):(min(big_df_sudkivu_start$scenario_num)+5)))
-
-sudkivu_min[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-
-sudkivu_min[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
-
-sudkivu_min[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
+# Plot max dose scenario
+big_df_bu <- filter(big_df_bujumbura_start,
+                          scenario_labels%in%scenario_names_plots[1:length(scenario_names_plots)])
 
 
 
 ```
 
-```{r Sud Kivu deaths min}
-sudkivu_min_deaths<-filter(big_df_sudkivu_start, TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((min(big_df_sudkivu_start$scenario_num)):(min(big_df_sudkivu_start$scenario_num)+5)))
 
-sudkivu_min_deaths[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-sudkivu_min_deaths[,c("Category","scenario_name","mean_averted_per_dose","lower_averted_95_per_dose","upper_averted_95_per_dose")]
-sudkivu_min_deaths[,c("Category","scenario_name","mean_cumulative_doses","lower_95_cumulative_doses","upper_95_cumulative_doses")]
 
+
+## All regions: total infections/deaths averted - max dose/ middle dose per day/ best priority
+
+
+```{r total percent, echo=FALSE, warning=FALSE, message=FALSE}
+equateur_max_cases <- filter(big_df_equateur_start, 
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+
+sudkivu_max_cases<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c(
+                            "K: MVA-BN + fractional + SWs first",
+                             "H: MVA-BN + SWs first"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+bujumbura_max_cases<-filter(big_df_bujumbura_start, 
+                            scenario_dose==50000,
+                            scenario_doses_per_day_character == "  500",
+                            scenario_labels%in%c("K: MVA-BN + fractional + SWs first","H: MVA-BN + SWs first"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))
+ # total cases averted 
+total_cases_averted<-equateur_max_cases$mean_averted+
+  sudkivu_max_cases$mean_averted+
+  bujumbura_max_cases$mean_averted
+# total baseline cases
+total_cases_no_vaccine<-equateur_max_cases$mean_counter+
+  sudkivu_max_cases$mean_counter+
+  bujumbura_max_cases$mean_counter
+# percentage of cases averted
+print("Total percentage of cases averted:")
+(total_cases_averted/total_cases_no_vaccine)*100
+
+print("Eqauteur percentage of cases averted:")
+equateur_max_cases$mean_percent*100
+equateur_max_cases$lower_95_percent*100
+equateur_max_cases$upper_95_percent*100
+
+print("Sud Kivu percentage of cases averted:")
+sudkivu_max_cases$mean_percent*100
+sudkivu_max_cases$lower_95_percent*100
+sudkivu_max_cases$upper_95_percent*100
+
+print("Bujumbura percentage of cases averted:")
+bujumbura_max_cases$mean_percent*100
+bujumbura_max_cases$lower_95_percent*100
+bujumbura_max_cases$upper_95_percent*100
+
+
+equateur_max_deaths<-filter(big_df_equateur_start, 
+                            scenario_doses_per_day_character == " 5,000",
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==520000,
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+
+sudkivu_max_deaths<-filter(big_df_sudkivu_start, 
+                            scenario_doses_per_day_character == " 5,000",
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first","H: MVA-BN + SWs first"),
+                          scenario_dose==2000000,
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("deaths_inc_cum"))
+
+bujumbura_max_extended<-filter(big_df_bujumbura_start, 
+                            scenario_doses_per_day_character == "  500",
+                            scenario_dose==800000,
+                            scenario_labels%in%c("K: MVA-BN + fractional + SWs first","H: MVA-BN + SWs first"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))
+ 
+# total deaths averted 
+total_deaths_averted<-equateur_max_deaths$mean_averted+
+  sudkivu_max_deaths$mean_averted
+# total deaths no vaccine
+total_deaths_no_vaccine<-equateur_max_deaths$mean_counter+
+  sudkivu_max_deaths$mean_counter
+# percentage of deaths averted
+print("Total percentage of deaths averted:")
+(total_deaths_averted/total_deaths_no_vaccine)*100
+
+print("Eqauteur percentage of deaths averted:")
+equateur_max_deaths$mean_percent*100
+equateur_max_deaths$lower_95_percent*100
+equateur_max_deaths$upper_95_percent*100
+
+print("Sud Kivu percentage of deaths averted:")
+sudkivu_max_deaths$mean_percent*100
+sudkivu_max_deaths$lower_95_percent*100
+sudkivu_max_deaths$upper_95_percent*100
+
+print("Bujumbura percentage of infection averted (extended analysis):")
+bujumbura_max_extended$mean_percent*100
+bujumbura_max_extended$lower_95_percent*100
+bujumbura_max_extended$upper_95_percent*100
 
 
 ```
 
-## Bujumbura 
 
-Scenario F - maximum doses percentage of infections and deaths averted:
+## Percent of SW & PBS infected by peak epidemic
 
-```{r Bujumbura max}
-bujumbura_max<-filter(big_df_bujumbura_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c(44:49))
-
-bujumbura_max[,c("Category","scenario_name","mean_percent","lower_95_percent","upper_95_percent")]
-```
-
-## SW & PBS percent infected by peak
-
-## Sud Kivu 
+# Sud Kivu 
 
 ```{r infections set up, include = FALSE}
 # Equateur 
@@ -286,7 +529,7 @@ scenario_id <- scenario_num <- which(scenario_grid$scenario_name=="No vaccinatio
 
 file_name <- paste0("model_run_output_",scenario_num,"eq.rds")
   
-  # Extracting all parameters from each scenario  
+     # Extracting all parameters from each scenario  
   n_weeks <- 104
   total_doses_children <- scenario_grid$total_doses_children[scenario_id]
   total_doses_adults<- scenario_grid$total_doses_adults[scenario_id]
@@ -320,8 +563,7 @@ file_name <- paste0("model_run_output_",scenario_num,"eq.rds")
   name = "pmcmc",
   query = "latest(parameter:region=='sudkivu')",
   files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
+            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds"))
 
   
   
@@ -374,20 +616,13 @@ file_name <- paste0("model_run_output_",scenario_num,"sk.rds")
                      parameter:vaccine_used == environment:vaccine_used)),
     files=c("inputs/${file_name}" = paste0("outputs/model_run_output_",scenario_num,".rds")))
   
-  orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='sudkivu')",
-  files = c("inputs/samples_sudkivu.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_sudkivu.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_sudkivu.png" = "outputs/traceplots.png"))
 
-  
-orderly2::orderly_resource("support.R")
-source("support.R")
 
 ```
 
-```{r Sud kivu percentage}
+
+
+```{r Sud kivu percentage, echo=FALSE, warning=FALSE, message=FALSE}
 # PMCMC output
 pmcmc_results_s <- readRDS("inputs/samples_sudkivu.RDS")
 fitting_data_s <- readRDS("inputs/fitting_data_sudkivu.RDS")
@@ -397,8 +632,8 @@ pars_unpacked_s <- apply(pmcmc_results_s$pars, 2, pmcmc_results_s$packer$unpack)
 # Population data
 pop_size <- mpoxseir::parameters_demographic(region="sudkivu")$province_pop
 
-eqauteur_pop_prop <- pop_size$equateur/89561404
-sudkivu_pop_prop <- pop_size$sudkivu/89561404
+eqauteur_pop_prop <- pop_size$equateur/sum(mpoxseir::parameters_demographic(region="sudkivu")$N_age)
+sudkivu_pop_prop <- pop_size$sudkivu/sum(mpoxseir::parameters_demographic(region="sudkivu")$N_age)
 
 # Pmcmc output
 SW_population<-pars_tidy_s|>filter(name=="prop_SW")|>mutate(population = pop_size$sudkivu,
@@ -438,12 +673,33 @@ infected_precent_summary <- infected_precent |> ungroup()|> summarise(pbs_percen
                                                           sw_pop_lower_95_value = quantile(pop_sw, 0.025, na.rm = TRUE),
                                                           sw_pop_upper_95_value = quantile(pop_sw, 0.975, na.rm = TRUE))
 
-infected_precent_summary*100
+
+print("Mean percent of SWs at peak Sud Kivu:")
+infected_precent_summary$sw_percent_mean*100
+print("95% CrI:")
+paste0("[",infected_precent_summary$sw_percent_lower_95_value*100,", ",
+       infected_precent_summary$sw_percent_upper_95_value*100,"]")
+
+print("Mean percent of PBSs at peak Sud Kivu:")
+infected_precent_summary$pbs_percent_mean*100
+print("95% CrI:")
+paste0("[",infected_precent_summary$pbs_percent_lower_95_value*100,", ",
+       infected_precent_summary$pbs_percent_upper_95_value*100,"]")
+
+print("Mean SW popuation Sud Kivu:")
+infected_precent_summary$sw_pop_mean
+print("95% CrI:")
+paste0("[",infected_precent_summary$sw_pop_lower_95_value,", ",
+       infected_precent_summary$sw_pop_upper_95_value,"]")
+
+
+## percentage of pop infected at start of outbreak
 
 
 ```
 
-## Bujumbura 
+
+# Bujumbura 
 
 ```{r Bujumbura infections set up, include = FALSE}
 
@@ -477,10 +733,10 @@ file_name <- paste0("model_run_output_",scenario_id_bu,"bu.rds")
 
   orderly2::orderly_dependency(
     "run_scenario_burundi",
-    quote(latest( parameter:short_run == this:short_run &&
-                     parameter:fit_by_age == this:fit_by_age &&
-                     parameter:deterministic == this:deterministic &&
-                     parameter:fit_KPs== this:fit_KPs &&
+    quote(latest( parameter:short_run == FALSE &&
+                     parameter:fit_by_age == TRUE &&
+                     parameter:deterministic == FALSE &&
+                     parameter:fit_KPs== TRUE &&
                      parameter:total_doses_adults == environment:total_doses_adults && 
                      parameter:total_doses_children == environment:total_doses_children && 
                      parameter:doses_per_day_total == environment:doses_per_day_total &&
@@ -493,21 +749,12 @@ file_name <- paste0("model_run_output_",scenario_id_bu,"bu.rds")
                      parameter:scenario_num == environment:scenario_num)),
     files=c("inputs/${file_name}" = paste0("outputs/model_run_output_",scenario_id_bu,".rds")))
   
-orderly2::orderly_dependency(
-  name = "pmcmc_burundi", 
-  query =  "latest()", 
-  files = c("inputs/samples_burundi.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_burundi.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_burundi.png" = "outputs/traceplots.png"))
-
   
-orderly2::orderly_resource("support.R")
-source("support.R")
+
 ```
 
-# Percentage of infections at peak 
 
-```{r Bujumbura percentages}
+```{r Bujumbura percentages, echo=FALSE, warning=FALSE, message=FALSE}
 # PMCMC output
 pmcmc_results_b <- readRDS("inputs/samples_burundi.RDS")
 pars_tidy_b <- tidy_pars(pmcmc_results_b)
@@ -540,7 +787,7 @@ infected_bu <- SW_peak_comp_bu |> group_by(Particle, Category) |> summarise(coun
 infected_precent_bu <- full_join(infected_bu, SW_population_bu, by = "Particle")|>
   mutate(pbs_percent = cases_inc_PBS/pop_pbs, sw_percent = cases_inc_SW/pop_sw)
 
-# summaraise mean and upper and lower 95% credible intervals 
+# summarise mean and upper and lower 95% credible intervals 
 infected_precent_summary_bu <- infected_precent_bu |> ungroup()|> summarise(pbs_percent_mean = mean(pbs_percent),
                                                           pbs_percent_median = median(pbs_percent), 
                                                           pbs_percent_lower_95_value = quantile(pbs_percent, 0.025, na.rm = TRUE),
@@ -554,24 +801,41 @@ infected_precent_summary_bu <- infected_precent_bu |> ungroup()|> summarise(pbs_
                                                           sw_pop_lower_95_value = quantile(pop_sw, 0.025, na.rm = TRUE),
                                                           sw_pop_upper_95_value = quantile(pop_sw, 0.975, na.rm = TRUE))
 
-infected_precent_summary_bu*100
+
+print("Mean percent of SWs at peak Bujumbura:")
+infected_precent_summary_bu$sw_percent_mean*100
+print("95% CrI:")
+paste0("[",infected_precent_summary_bu$sw_percent_lower_95_value*100,", ",infected_precent_summary_bu$sw_percent_upper_95_value*100,"]")
+
+print("Mean percent of PBSs at peak Bujumbura:")
+infected_precent_summary_bu$pbs_percent_mean*100
+print("95% CrI:")
+paste0("[",infected_precent_summary_bu$pbs_percent_lower_95_value*100,", ",infected_precent_summary_bu$pbs_percent_upper_95_value*100,"]")
+
+print("Mean SW popuation Bujumbura:")
+infected_precent_summary_bu$sw_pop_mean
+print("95% CrI:")
+paste0("[",infected_precent_summary_bu$sw_pop_lower_95_value,", ",
+       infected_precent_summary_bu$sw_pop_upper_95_value,"]")
 
 # percent of total infections that are SW?
 
-pars_unpacked_b[[1]]$N0
-pars_unpacked_b[[1]]$S0
+#pars_unpacked_b[[1]]$N0
+#pars_unpacked_b[[1]]$S0
 
 ```
 
 
-## Percentage of pop infected at start of data 
+# Percentage of population infected at start of data 
 
-```{r infections outside percentages}
+
+```{r infections outside percentages, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Bujumbura data starts on 595
 pre_start<-big_df_bujumbura_start|>filter(Category%in%c("cases_inc"), date%in%(seq(from = mpoxseir::mpoxseir_date_as_date(490), to =mpoxseir::mpoxseir_date_as_date(594), by = "day")))
 #sum(test$mean_counter)/pop_size$bujumbura
 # 1 in X people:
+print("Bujumbura, 1 in X people infected at start of data:")
 pop_size$bujumbura/sum(pre_start$mean_counter)
 
 # Sud Kivu data starts on 371
@@ -592,140 +856,1035 @@ pop_size$bujumbura/sum(pre_start$mean_counter)
   
 pre_start_sk<-fits_wide|>filter(Category%in%c("cases_inc"), date%in%(seq(from = mpoxseir::mpoxseir_date_as_date(280), to = mpoxseir::mpoxseir_date_as_date(370), by = "day")))
 # 1 in X people:
+print("Sud Kivu, 1 in X people infected at start of data:")
 pop_size$sudkivu/sum(pre_start_sk$mean_counter)
 
 
 ```
 
-## Percentage of infections outside sexual networks
 
-```{r infections outside percentages}
+## Scenario values
+## Eqauteur, 520,000 doses/5,000 doses per day - LC16m8 + kids first
 
-# Bujumbura
-counter_output_eq <- readRDS(paste0("inputs/model_run_output_",scenario_id,"eq.rds")) %>%
-  rename(counter =Value)
-outside_inf_eq <- counter_output_eq |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
+```{r eqauteur scenarios 1, echo=FALSE, warning=FALSE, message=FALSE }
 
-sum_outside_inf_eq<-outside_inf_eq|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
 
-percentage_outside_inf_eq <- sum_outside_inf_eq|> ungroup() |> summarise( mean_outside=mean(percent_outside),  lower_outside=quantile(percent_outside, 0.025), upper_outside=quantile(percent_outside, 0.975), median_inside=median(percent_inside), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
 
-percentage_outside_inf_eq*100
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
 
-# Sud Kivu
-counter_output_sk <- readRDS(paste0("inputs/model_run_output_",scenario_id,"sk.rds")) %>%
-  rename(counter =Value)
-outside_inf_sk <- counter_output_sk |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
 
-sum_outside_inf_sk<-outside_inf_sk|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
 
-percentage_outside_inf_sk <- sum_outside_inf_sk|> ungroup() |> summarise(median_outside=median(percent_outside), mean_outside=mean(percent_outside),  lower_outside=quantile(percent_outside, 0.025), upper_outside=quantile(percent_outside, 0.975),median_inside=median(percent_inside), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
 
-percentage_outside_inf_sk*100
 
-# Bujumbura
-counter_output_bu <- readRDS(paste0("inputs/model_run_output_",scenario_id,"bu.rds")) %>%
-  rename(counter =Value)
-outside_inf_bu <- counter_output_bu |> filter( Category%in%c("cases_inc", "cases_inc_PBS", "cases_inc_SW")) |> pivot_wider(names_from = Category, values_from = counter)|>mutate(outside=cases_inc-cases_inc_PBS-cases_inc_SW, inside=cases_inc_PBS+cases_inc_SW)
-
-sum_outside_inf_bu<-outside_inf_bu|> group_by(Particle)|>summarise(outside=sum(outside), inside=sum(inside), total=sum(cases_inc))|>mutate(percent_inside=inside/total, percent_outside=outside/total)
-
-percentage_outside_inf_bu <- sum_outside_inf_bu|> ungroup() |> summarise(median_outside=median(percent_outside), mean_outside=mean(percent_outside), lower_outside=quantile(percent_outside, 0.025),upper_outside=quantile(percent_outside, 0.975), mean_inside=mean(percent_inside),  lower_inside=quantile(percent_inside, 0.025), upper_inside=quantile(percent_inside, 0.975))
-
-percentage_outside_inf_bu*100
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
 
 ```
 
-## All regions - totals
+## Eqauteur, 260,000 doses/5,000 doses per day - LC16m8 + kids first
+
+```{r eqauteur scenarios 2, echo=FALSE, warning=FALSE, message=FALSE }
+
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==260000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
 
 
-```{r total percent}
-equateur_max_cases<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
-
-sudkivu_max_cases<-filter(big_df_sudkivu_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("cases_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
-
-bujumbura_max_cases<-filter(big_df_bujumbura_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), Category%in%c("cases_inc_cum"), scenario_num%in%c(44:49))
- # total cases averted 
-total_cases_averted<-equateur_max_cases$mean_averted+
-  sudkivu_max_cases$mean_averted+
-  bujumbura_max_cases$mean_averted
-# total baseline cases
-total_cases_no_vaccine<-equateur_max_cases$mean_counter+
-  sudkivu_max_cases$mean_counter+
-  bujumbura_max_cases$mean_counter
-# percentage of cases averted
-print("Total percentage of cases averted:")
-(total_cases_averted/total_cases_no_vaccine)*100
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
 
 
-equateur_max_deaths<-filter(big_df_equateur_start, scenario_name=="A: LC16m8", TimeStep==max(big_df_equateur_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((max(big_df_equateur_start$scenario_num)-5):max(big_df_equateur_start$scenario_num)))
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
 
-sudkivu_max_deaths<-filter(big_df_sudkivu_start, scenario_name%in%c("F: D + key pops first"), TimeStep==max(big_df_sudkivu_start$TimeStep), Category%in%c("deaths_inc_cum"), scenario_num%in%c((max(big_df_sudkivu_start$scenario_num)-5):max(big_df_sudkivu_start$scenario_num)))
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="B: LC16m8 + kids first",
+                           scenario_dose==260000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
 
- # total deaths averted 
-total_deaths_averted<-equateur_max_deaths$mean_averted+
-  sudkivu_max_deaths$mean_averted
-# total deaths no vaccine
-total_deaths_no_vaccine<-equateur_max_deaths$mean_counter+
-  sudkivu_max_deaths$mean_counter
-# percentage of deaths averted
-print("Total percentage of deaths averted:")
-(total_deaths_averted/total_deaths_no_vaccine)*100
+
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
+
+```
+
+## Eqauteur, 260,000 doses/5,000 doses per day - LC16m8 + no priority
+
+```{r eqauteur scenarios 3, echo=FALSE, warning=FALSE, message=FALSE }
+
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="A: LC16m8",
+                           scenario_dose==260000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
 
 
-# total doses
-print("Total doses administered:")
-total_doses_administered<-equateur_max_cases$mean_cumulative_doses+
-  sudkivu_max_cases$mean_cumulative_doses+
-  bujumbura_max_cases$mean_cumulative_doses
-total_doses_administered
-print("Total doses available:")
-total_doses_available<-equateur_max_cases$total_doses_children+
-  sudkivu_max_cases$total_doses_adults+
-  bujumbura_max_cases$total_doses_adults
-total_doses_available
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="A: LC16m8",
+                           scenario_dose==260000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
+
+
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
+
+```
+
+## Eqauteur, 520,000 doses/5,000 doses per day - one dose fractional MVA no priority
+
+```{r eqauteur scenarios 1 dose fractional, echo=FALSE, warning=FALSE, message=FALSE }
+
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="I: MVA-BN + fractional",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="I: MVA-BN + fractional",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
+
+
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
+
+```
+
+## Eqauteur, 520,000 doses/5,000 doses per day - one dose MVA no priority
+
+```{r eqauteur scenarios 1 dose, echo=FALSE, warning=FALSE, message=FALSE }
+
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="F: MVA-BN",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="F: MVA-BN",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
+
+
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
+
 ```
 
 
-```{r R0 all regions set up, include=FALSE}
-orderly2::orderly_dependency(
-  name = "pmcmc",
-  query = "latest(parameter:region=='equateur'  &&  parameter:assumptions == 'standard')",
-  files = c("inputs/samples_equateur.rds" = "outputs/samples.rds",
-            "inputs/fitting_data_equateur.rds" = "outputs/fitting_data.rds",
-            "outputs/traceplots_equateur.png" = "outputs/traceplots.png"))
+`
+## Eqauteur, 520,000 doses/5,000 doses per day - two dose MVA no priority
+
+```{r eqauteur scenarios 2 dose, echo=FALSE, warning=FALSE, message=FALSE }
+
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="L: Two dose MVA-BN",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+# Deaths 
+equateur_best_scenario_deaths<-filter(big_df_equateur_start, 
+                           scenario_labels=="L: Two dose MVA-BN",
+                           scenario_dose==520000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("deaths_inc_cum"))
+print("Mean deaths averted:")
+equateur_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_averted, ", ", equateur_best_scenario_deaths$upper_95_averted, "]")
+
+
+print("Mean percent deaths averted:")
+equateur_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario_deaths$lower_95_percent, ", ", equateur_best_scenario_deaths$upper_95_percent, "]")
+
+```
+
+## Eqauteur, 130,000 doses/5,000 doses per day - one and fractional dose MVA no priority
+
+```{r eqauteur fractional, echo=FALSE, warning=FALSE, message=FALSE }
+
+print("one full dose")
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="F: MVA-BN",
+                           scenario_dose==130000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+
+
+print("one fractional dose")
+equateur_best_scenario<-filter(big_df_equateur_start, 
+                           scenario_labels=="I: MVA-BN + fractional",
+                           scenario_dose==130000,
+                           scenario_doses_per_day_character == " 5,000",
+                           TimeStep==max(big_df_equateur_start$TimeStep),
+                           Category%in%c("cases_inc_cum"))
+print("Mean cases averted:")
+equateur_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_averted, ", ", equateur_best_scenario$upper_95_averted, "]")
+
+
+print("Mean percent cases averted:")
+equateur_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_95_percent, ", ", equateur_best_scenario$upper_95_percent, "]")
+
+
+print("Mean cases averted per dose:")
+equateur_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",equateur_best_scenario$lower_averted_95_per_dose, ", ", equateur_best_scenario$upper_averted_95_per_dose, "]")
+
+
+```
+
+
+## Sud Kivu, 2 million doses - MVA-BN single dose + SWs first + fractional
+
+```{r sud kivu scenarios 1, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_best_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first"),
+                          scenario_dose==2000000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_95_averted, ", ", sudkivu_best_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_95_percent, ", ", sudkivu_best_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_averted_95_per_dose, ", ", sudkivu_best_scenario$upper_averted_95_per_dose, "]")
+
+
+sudkivu_best_scenario_deaths<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first"),
+                          scenario_dose==2000000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("deaths_inc_cum"))
+
+print("Mean deaths averted:")
+sudkivu_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario_deaths$lower_95_averted, ", ", sudkivu_best_scenario_deaths$upper_95_averted, "]")
+
+print("Mean percent deaths averted:")
+sudkivu_best_scenario_deaths$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario_deaths$lower_95_percent, ", ", sudkivu_best_scenario_deaths$upper_95_percent, "]")
+```
+
+
+## Sud Kivu, 10,000 doses/5,000 doses per day - MVA-BN single dose + SWs first 
+
+```{r sud kivu scenarios 2, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_10000_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first",
+                                               "H: MVA-BN + SWs first"),
+                          scenario_dose==10000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+cbind(sudkivu_10000_scenario$scenario_labels,sudkivu_10000_scenario$mean_averted)
+print("95% CrI interval:")
+cbind(sudkivu_10000_scenario$scenario_labels,paste0("[",sudkivu_10000_scenario$lower_95_averted, ", ", sudkivu_10000_scenario$upper_95_averted, "]"))
+
+print("Mean percent cases averted:")
+cbind(sudkivu_10000_scenario$scenario_labels,sudkivu_10000_scenario$mean_percent)
+print("95% CrI interval:")
+cbind(sudkivu_10000_scenario$scenario_labels,paste0("[",sudkivu_10000_scenario$lower_95_percent, ", ", sudkivu_10000_scenario$upper_95_percent, "]"))
+
+print("Mean cases averted per dose:")
+cbind(sudkivu_10000_scenario$scenario_labels,sudkivu_10000_scenario$mean_averted_per_dose)
+print("95% CrI interval:")
+cbind(sudkivu_10000_scenario$scenario_labels,paste0("[",sudkivu_10000_scenario$lower_averted_95_per_dose, ", ", sudkivu_10000_scenario$upper_averted_95_per_dose, "]"))
+
+
+sudkivu_10000_scenario_detahs<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first",
+                                               "H: MVA-BN + SWs first"),
+                          scenario_dose==10000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("deaths_inc_cum"))
+
+print("Mean deaths averted:")
+cbind(sudkivu_10000_scenario_detahs$scenario_labels,sudkivu_10000_scenario_detahs$mean_averted)
+print("95% CrI interval:")
+cbind(sudkivu_10000_scenario_detahs$scenario_labels,paste0("[",sudkivu_10000_scenario_detahs$lower_95_averted, ", ", sudkivu_10000_scenario_detahs$upper_95_averted, "]"))
+
+print("Mean percent deaths averted:")
+cbind(sudkivu_10000_scenario_detahs$scenario_labels,sudkivu_10000_scenario_detahs$mean_percent)
+print("95% CrI interval:")
+cbind(sudkivu_10000_scenario_detahs$scenario_labels,paste0("[",sudkivu_10000_scenario_detahs$lower_95_percent, ", ", sudkivu_10000_scenario_detahs$upper_95_percent, "]"))
+
+```
+
+## Sud Kivu, 10,000 doses/5,000 doses per day - MVA-BN single dose + no priority 
+
+```{r sud kivu scenarios 2 no priority, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_10000_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN", "I: MVA-BN + fractional"),
+                          scenario_dose==10000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_10000_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_10000_scenario$lower_95_averted, ", ", sudkivu_10000_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_10000_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_10000_scenario$lower_95_percent, ", ", sudkivu_10000_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_10000_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_10000_scenario$lower_averted_95_per_dose, ", ", sudkivu_10000_scenario$upper_averted_95_per_dose, "]")
+
+
+sudkivu_10000_scenario_detahs<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("H: MVA-BN + SWs first", "I: MVA-BN + fractional"),
+                          scenario_dose==10000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("deaths_inc_cum"))
+
+print("Mean deaths averted:")
+sudkivu_10000_scenario_detahs$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_10000_scenario_detahs$lower_95_averted, ", ", sudkivu_10000_scenario_detahs$upper_95_averted, "]")
+
+print("Mean percent deaths averted:")
+sudkivu_10000_scenario_detahs$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_10000_scenario_detahs$lower_95_percent, ", ", sudkivu_10000_scenario_detahs$upper_95_percent, "]")
+
+```
+## Sud Kivu, 1 million doses - MVA-BN single dose + kids first 
+
+```{r sud kivu scenarios 1 mil, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_best_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("G: MVA-BN + kids first"),
+                          scenario_dose==1000000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_95_averted, ", ", sudkivu_best_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_95_percent, ", ", sudkivu_best_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario$lower_averted_95_per_dose, ", ", sudkivu_best_scenario$upper_averted_95_per_dose, "]")
+
+
+sudkivu_best_scenario_deaths<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("H: MVA-BN + SWs first"),
+                          scenario_dose==2000000,
+                           scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("deaths_inc_cum"))
+
+print("Mean deaths averted:")
+sudkivu_best_scenario_deaths$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_best_scenario_deaths$lower_95_averted, ", ", sudkivu_best_scenario_deaths$upper_95_averted, "]")
+```
+
+
+## Sud Kivu, 2 million doses - MVA-BN fractional single dose (no priority)
+
+```{r sud kivu scenarios 3 frac , echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN",
+                                               "I: MVA-BN + fractional"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## Sud Kivu, 2 million doses - MVA-BN single dose (no priority)
+
+```{r sud kivu scenarios 3 , echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## Sud Kivu, 2 million doses - MVA-BN two dose (no priority)
+
+```{r sud kivu scenarios 5 , echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("L: Two dose MVA-BN"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+
+## Sud Kivu, 2 million doses - LC16m8 (no priority)
+
+```{r sud kivu scenarios 4, echo=FALSE, warning=FALSE, message=FALSE }
+
+sudkivu_lc16_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("A: LC16m8"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+sudkivu_lc16_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_lc16_scenario$lower_95_averted, ", ", sudkivu_lc16_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_lc16_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_lc16_scenario$lower_95_percent, ", ", sudkivu_lc16_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_lc16_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_lc16_scenario$lower_averted_95_per_dose, ", ", sudkivu_lc16_scenario$upper_averted_95_per_dose, "]")
+```
+
+
+##  Bujumbura, 50,000 doses/ 500 doses per day - MVA-BN single dose + SWs first
+```{r bujumbura scenarios 1, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_best_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==50000,
+                             scenario_doses_per_day_character == "  500",
+                            scenario_labels%in%c("H: MVA-BN + SWs first"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+bujumbura_best_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",bujumbura_best_scenario$lower_95_averted, ", ", bujumbura_best_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+bujumbura_best_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",bujumbura_best_scenario$lower_95_percent, ", ", bujumbura_best_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+bujumbura_best_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",bujumbura_best_scenario$lower_averted_95_per_dose, ", ", bujumbura_best_scenario$upper_averted_95_per_dose, "]")
+
+```
+
+
+##  Bujumbura, 800,000 doses/ 500 doses per day - MVA-BN single dose + SWs first/  MVA-BN two dose + SWs first
+```{r bujumbura scenarios 2, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_best_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==800000,
+                             scenario_doses_per_day_character == "  500",
+                            scenario_labels%in%c("I: MVA-BN + fractional",
+                                                 "F: MVA-BN",
+                                                 "K: MVA-BN + fractional + SWs first",
+                                                 "L: Two dose MVA-BN"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))
+
+print("Mean cases averted:")
+cbind(bujumbura_best_scenario$scenario_labels,bujumbura_best_scenario$mean_averted)
+print("95% CrI interval:")
+cbind(bujumbura_best_scenario$scenario_labels,
+      paste0("[",bujumbura_best_scenario$lower_95_averted, ", ", bujumbura_best_scenario$upper_95_averted, "]"))
+
+print("Mean percent cases averted:")
+cbind(bujumbura_best_scenario$scenario_labels,bujumbura_best_scenario$mean_percent)
+print("95% CrI interval:")
+cbind(bujumbura_best_scenario$scenario_labels,paste0("[",bujumbura_best_scenario$lower_95_percent, ", ", bujumbura_best_scenario$upper_95_percent, "]"))
+
+print("Mean cases averted per dose:")
+cbind(bujumbura_best_scenario$scenario_labels,bujumbura_best_scenario$mean_averted_per_dose)
+print("95% CrI interval:")
+cbind(bujumbura_best_scenario$scenario_labels,paste0("[",bujumbura_best_scenario$lower_averted_95_per_dose, ", ", bujumbura_best_scenario$upper_averted_95_per_dose, "]"))
+
+```
+
+
+## rollout speed analysis 
+# Bujumbura - 50,000 doses/ 25 doses per day/ all equal
+```{r bujumbura scenarios rollout 1 all equal, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_25_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==50000,
+                             scenario_doses_per_day_character == "   25",
+                            scenario_priority%in%c("All equal"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+bujumbura_25_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_95_averted, ", ", bujumbura_25_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+bujumbura_25_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_95_percent, ", ", bujumbura_25_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+bujumbura_25_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_averted_95_per_dose, ", ", bujumbura_25_scenario$upper_averted_95_per_dose, "]")
+
+```
+
+# Bujumbura - 50,000 doses/ 2,000 doses per day/ all equal
+```{r bujumbura scenarios rollout 2 all equal, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_2000_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==50000,
+                             scenario_doses_per_day_character == "2,000",
+                            scenario_priority%in%c("All equal"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+bujumbura_2000_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_95_averted, ", ", bujumbura_2000_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+bujumbura_2000_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_95_percent, ", ", bujumbura_2000_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+bujumbura_2000_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_averted_95_per_dose, ", ", bujumbura_2000_scenario$upper_averted_95_per_dose, "]")
+
+```
+
+# Bujumbura - 50,000 doses/ 25 doses per day/ SW first
+```{r bujumbura scenarios rollout 1 sw, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_25_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==50000,
+                             scenario_doses_per_day_character == "   25",
+                            scenario_priority%in%c("SWs first"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+bujumbura_25_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_95_averted, ", ", bujumbura_25_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+bujumbura_25_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_95_percent, ", ", bujumbura_25_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+bujumbura_25_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",bujumbura_25_scenario$lower_averted_95_per_dose, ", ", bujumbura_25_scenario$upper_averted_95_per_dose, "]")
+
+```
+
+# Bujumbura - 50,000 doses/ 2,000 doses per day/ SW first
+```{r bujumbura scenarios follout 1 all equal, echo=FALSE, warning=FALSE, message=FALSE}
+bujumbura_2000_scenario<-filter(big_df_bujumbura_start, 
+                             scenario_dose==50000,
+                             scenario_doses_per_day_character == "2,000",
+                            scenario_priority%in%c("SWs first"),
+                            TimeStep==max(big_df_bujumbura_start$TimeStep, na.rm = TRUE), 
+                            Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+bujumbura_2000_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_95_averted, ", ", bujumbura_2000_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+bujumbura_2000_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_95_percent, ", ", bujumbura_2000_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+bujumbura_2000_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",bujumbura_2000_scenario$lower_averted_95_per_dose, ", ", bujumbura_2000_scenario$upper_averted_95_per_dose, "]")
+
+```
+
+
+## Sud Kivu, 2 million doses / 250 rollout / all equal 
+
+```{r sud kivu scenarios rollout 250 all equal, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_priority%in%c("All equal"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == "   250",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+## Sud Kivu, 2 million doses / 20,000 rollout / all equal 
+
+```{r sud kivu scenarios 20000 all equal , echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_priority%in%c("All equal"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == "20,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+
+## Sud Kivu, 2 million doses / 250 rollout / SWs first
+
+```{r sud kivu scenarios rollout 250 SW, echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == "   250",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## Sud Kivu, 2 million doses / 20,000 rollout / SWs first 
+
+```{r sud kivu scenarios 20000 SW , echo=FALSE, warning=FALSE, message=FALSE}
+
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("K: MVA-BN + fractional + SWs first"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == "20,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## fractional SK 
+
+```{r sud kivu fractional, echo=FALSE, warning=FALSE, message=FALSE}
+print("one full dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN"),
+                          scenario_dose==500000,
+                                              scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("one fractional dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("I: MVA-BN + fractional"),
+                          scenario_dose==500000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+```
+
+## fractional SK 2 million
+
+```{r sud kivu fractional, echo=FALSE, warning=FALSE, message=FALSE}
+print("one full dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("F: MVA-BN"),
+                          scenario_dose==2000000,
+                                              scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("Mean doses given:")
+sudkivu_nopriority_scenario$mean_cumulative_doses
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_cumulative_doses, ", ", sudkivu_nopriority_scenario$upper_95_cumulative_doses, "]")
+
+print("one fractional dose")
+sudkivu_nopriority_scenario<-filter(big_df_sudkivu_start, 
+                          scenario_labels%in%c("I: MVA-BN + fractional"),
+                          scenario_dose==2000000,
+                          scenario_doses_per_day_character == " 5,000",
+                          TimeStep==max(big_df_sudkivu_start$TimeStep),
+                          Category%in%c("cases_inc_cum"))|>top_n(1, mean_averted)
+
+print("Mean cases averted:")
+sudkivu_nopriority_scenario$mean_averted
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_averted, ", ", sudkivu_nopriority_scenario$upper_95_averted, "]")
+
+print("Mean percent cases averted:")
+sudkivu_nopriority_scenario$mean_percent
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_percent, ", ", sudkivu_nopriority_scenario$upper_95_percent, "]")
+
+print("Mean cases averted per dose:")
+sudkivu_nopriority_scenario$mean_averted_per_dose
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_averted_95_per_dose, ", ", sudkivu_nopriority_scenario$upper_averted_95_per_dose, "]")
+
+print("Mean doses given:")
+sudkivu_nopriority_scenario$mean_cumulative_doses
+print("95% CrI interval:")
+paste0("[",sudkivu_nopriority_scenario$lower_95_cumulative_doses, ", ", sudkivu_nopriority_scenario$upper_95_cumulative_doses, "]")
+```
+
+
+## Transmission route percentages
+
+```{r transmission, echo=FALSE, warning=FALSE, message=FALSE}
 pmcmc_results_e <- readRDS("inputs/samples_equateur.RDS")
-fitting_data_e <- readRDS("inputs/fitting_data_equateur.RDS")
-fitting_data_e <- fitting_data_e$data |> mutate(region="equateur") |> dplyr::select(date, cases_total, region)
-pars_tidy_e <- tidy_pars(pmcmc_results_e)
 
-```
-
-
-```{r Rt mean}
-# Sud Kivu
-Rt_sudkivu <- big_df_sudkivu_start|>filter(Category%in%c("Rt"), scenario_new=="A: LC16m8", scenario_num==50)
-#range
-range(Rt_sudkivu$mean_counter)
-# first time step
-Rt_sudkivu$mean_counter[1]
-
-
-# Equateur
-Rt_equateur <- big_df_equateur_start|>filter(Category%in%c("Rt"), scenario_new=="A: LC16m8", scenario_num==50)
-#range
-range(Rt_equateur$mean_counter)
-# first time step
-Rt_equateur$mean_counter[1]
-
-
-```
-
-
-
-# Transmission route percentages
-
-```{r transmission}
     # unpack results
     pars_unpacked_e <- apply(pmcmc_results_e$pars, 2, pmcmc_results_e$packer$unpack)
     pars_unpacked_s <- apply(pmcmc_results_s$pars, 2, pmcmc_results_s$packer$unpack)
@@ -756,10 +1915,28 @@ state_tidy <- rbind(state_e, state_s, state_b) |>
   
 ```
 
+## All regions - R0 values
+
+```{r R0, echo=FALSE, warning=FALSE, message=FALSE}
+    r0_e <- calc_R0(pmcmc_results_e, "equateur", no_historic_vax = TRUE)
+    r0_s <- calc_R0(pmcmc_results_s, "sudkivu", no_historic_vax = TRUE)
+    r0_b <- calc_R0(pmcmc_results_b, "bujumbura", no_historic_vax = TRUE)
+    r0 <-rbind(r0_e|>as.data.frame()|>mutate(region="equateur"), 
+               r0_s|>as.data.frame()|>mutate(region="sudkivu"),
+               r0_b|>as.data.frame()|>mutate(region="burundi"))|>
+      group_by(region)|>
+      pivot_longer(names_to = "name", values_to = "value", cols=1:3)
+    
+#R0 summariers
+r0_summary<-r0|>group_by(region, name)|>summarise(mean=mean(value), lower_95=quantile(value, 0.025), upper_95=quantile(value,0.975))
+r0_summary
+    
+```
+
 
 ## CFR - by age groups 
 
-```{r cfr lower percent}
+```{r cfr lower percent, echo=FALSE, warning=FALSE, message=FALSE}
 
 # historic clade 1 b
 both=FALSE
@@ -790,7 +1967,6 @@ cfr_sudkivu <- extract_cfr_by_age(pars_unpacked_s, region="sudkivu", both=both, 
 
 percent_lower_sk<-(cfr_prior_summary[1:16,1:1000]-cfr_sudkivu)/cfr_prior_summary[1:16,1:1000]
 
-percent_lower_sk
 percent_lower_sk_mean_over_age <- apply(percent_lower_sk, 2, mean)
 
 print("Sud Kivu: % lower than prior")
@@ -811,17 +1987,4 @@ extract_cfr_by_age(pars_unpacked_s, region="sudkivu", both=both, summarise = TRU
 ```
 
 
-
-```{r cfr crude}
-
-# crude CFR deaths/case
-print("Crude CFR from Equateur data:")
-sum(fitting_data_equateur$data$deaths, na.rm = TRUE)/sum(fitting_data_equateur$data$cases, na.rm=TRUE)
-print("Crude CFR from Sud Kivu data:")
-sum(fitting_data_sudkivu$data$deaths, na.rm = TRUE)/sum(fitting_data_sudkivu$data$cases, na.rm=TRUE)
-
-# cases Bujumbura/cases burundi 
-sum(fitting_data_bujumbura$data$cases, na.rm=TRUE)/sum(fitting_data_bujumbura$data$cases_binom, na.rm=TRUE)
-
-```
 

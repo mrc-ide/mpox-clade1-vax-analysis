@@ -80,7 +80,9 @@ get_data <- function(x, x_linelist, x_who_shiny, start_date, end_date,
 }
 
 
-get_prior <- function(region, names){
+get_prior <- function(region, names, assumptions){
+  ## We will use the monty DSL for priors, but it is not currently setup
+  ## for nested models so we will have to write that version manually
   
   ## Priors for prop_SW have a = 2 and then b is set to ensure mean of 0.03 for
   ## Sud-Kivu and 0.007 for Equateur
@@ -101,30 +103,58 @@ get_prior <- function(region, names){
         domain = domain
       ))
   } else if (region == "equateur") {
-    monty::monty_dsl({
-      alpha_cases ~ Beta(1, 9)
-      alpha_deaths ~ Beta(1, 9)
-      cfr_00_04 ~ Beta(1, 1)
-      beta_z_max ~ Uniform(0, 1000)
-      lambda ~ Uniform(0, 1000)
-      phi_05_14 ~ Beta(1, 1)
-      phi_15_plus ~ Beta(1, 1)
-      prop_SW ~ Beta(2, 2 * (1 / 0.007 - 1))
-      R0_hh ~ Uniform(0, 1000)
-      R0_sw_st ~ Uniform(0, 1000)
-    })
+    if (assumptions == "standard") {
+      monty::monty_dsl({
+        alpha_cases ~ Beta(1, 9)
+        alpha_deaths ~ Beta(1, 9)
+        cfr_00_04 ~ Beta(1, 1)
+        beta_z_max ~ Uniform(0, 1000)
+        lambda ~ Uniform(0, 1000)
+        phi_05_14 ~ Beta(1, 1)
+        phi_15_plus ~ Beta(1, 1)
+        prop_SW ~ Beta(2, 2 * (1 / 0.007 - 1))
+        R0_hh ~ Uniform(0, 1000)
+        R0_sw_st ~ Uniform(0, 1000)
+      })
+    } else {
+      monty::monty_dsl({
+        alpha_cases ~ Beta(1, 9)
+        alpha_deaths ~ Beta(1, 9)
+        cfr_00_04 ~ Beta(1, 1)
+        beta_z_max ~ Uniform(0, 1000)
+        lambda ~ Uniform(0, 1000)
+        phi_05_14 ~ Beta(1, 1)
+        phi_15_plus ~ Beta(1, 1)
+        R0_hh ~ Uniform(0, 1000)
+        R0_sw_st ~ Uniform(0, 1000)
+      })
+    }
   } else {
-    monty::monty_dsl({
-      alpha_cases ~ Beta(1, 9)
-      alpha_deaths ~ Beta(1, 9)
-      cfr_00_04 ~ Beta(1, 1)
-      lambda ~ Uniform(0, 1000)
-      phi_05_14 ~ Beta(1, 1)
-      phi_15_plus ~ Beta(1, 1)
-      prop_SW ~ Beta(2, 2 * (1 / 0.03 - 1))
-      R0_hh ~ Uniform(0, 1000)
-      R0_sw_st ~ Uniform(0, 1000)
-    })
+    if (assumptions == "standard") {
+      monty::monty_dsl({
+        alpha_cases ~ Beta(1, 9)
+        alpha_deaths ~ Beta(1, 9)
+        cfr_00_04 ~ Beta(1, 1)
+        lambda ~ Uniform(0, 1000)
+        phi_05_14 ~ Beta(1, 1)
+        phi_15_plus ~ Beta(1, 1)
+        prop_SW ~ Beta(2, 2 * (1 / 0.03 - 1))
+        R0_hh ~ Uniform(0, 1000)
+        R0_sw_st ~ Uniform(0, 1000)
+      })
+    } else {
+      monty::monty_dsl({
+        alpha_cases ~ Beta(1, 9)
+        alpha_deaths ~ Beta(1, 9)
+        cfr_00_04 ~ Beta(1, 1)
+        lambda ~ Uniform(0, 1000)
+        phi_05_14 ~ Beta(1, 1)
+        phi_15_plus ~ Beta(1, 1)
+        R0_hh ~ Uniform(0, 1000)
+        R0_sw_st ~ Uniform(0, 1000)
+      })
+    }
+    
   }
 }
 
@@ -272,7 +302,7 @@ save_pars_inputs <- function(samples, mcmc_pars, region) {
 
 
 run_pmcmc <- function(filter, packer, mcmc_pars, control, deterministic, region,
-                      snapshots) {
+                      snapshots, assumptions) {
   
   index <- save_index(rt = TRUE)
   
@@ -283,7 +313,7 @@ run_pmcmc <- function(filter, packer, mcmc_pars, control, deterministic, region,
                                              save_trajectories = index$idx,
                                              save_snapshots = snapshots)
   
-  prior <- get_prior(region, packer$names())
+  prior <- get_prior(region, packer$names(), assumptions)
   
   density <- likelihood + prior 
   

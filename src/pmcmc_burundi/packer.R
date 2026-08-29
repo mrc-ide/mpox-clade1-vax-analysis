@@ -1,5 +1,5 @@
 create_packer <- function(mixing_matrix, use_ve_D = FALSE,
-                          overrides = list(), region) {
+                          overrides = list(), region, assumptions) {
   
   fitted_pars <- c("alpha_cases",
                    "phi_05_14",
@@ -8,8 +8,12 @@ create_packer <- function(mixing_matrix, use_ve_D = FALSE,
                    "R0_hh",
                    "R0_sw_st",
                    "rho")
+  
+  if (assumptions == "fix_prop_SW") {
+    fitted_pars <- fitted_pars[fitted_pars != "prop_SW"]
+  }
 
-  fixed <- get_fixed(mixing_matrix, use_ve_D, overrides, region)
+  fixed <- get_fixed(mixing_matrix, use_ve_D, overrides, region, assumptions)
   
   packer <- monty::monty_packer(
     scalar = fitted_pars, fixed = fixed, process = process)
@@ -18,7 +22,7 @@ create_packer <- function(mixing_matrix, use_ve_D = FALSE,
 }
 
 get_fixed <- function(mixing_matrix, use_ve_D = FALSE, 
-                      overrides = list(), region) {
+                      overrides = list(), region, assumptions) {
   fixed <- 
     mpoxseir::parameters_fixed(region = region,
                                mixing_matrix = mixing_matrix,
@@ -55,6 +59,11 @@ get_fixed <- function(mixing_matrix, use_ve_D = FALSE,
   fixed$S0 <- NULL
   fixed$m_sex <- NULL
   fixed$m_gen_pop <- NULL
+  
+  if (assumptions == "fix_prop_SW") {
+    ## 0.79%
+    fixed$prop_SW <- 0.79 / 100
+  }
   
   names(fixed)[names(fixed) == "seed_rate"] <- "seed_profile"
   
@@ -100,6 +109,8 @@ process <- function(x) {
   
   
   ## Calculate beta_household given R0, mixing matrix and duration of infectiousness
+  ## Note this isn't quite correct and we need to sort this
+  ## We should be include household contacts of PBS and SWs
   m_gen_pop <- demographic_params$m_gen_pop
   beta_h <- x$R0_hh / 
     Re(eigen(m_gen_pop * duration_infectious_by_age)$values[1])
